@@ -1,11 +1,11 @@
 import { Injectable } from '@angular/core';
-import { map, Observable, of, switchMap } from 'rxjs';
+import type { Json } from '@manus/shared';
+import { map, Observable, switchMap } from 'rxjs';
 import { SupabaseService } from '../../../services/supabase.service';
 import { intervaloPagina } from '../../../utils/_constantes/paginacao';
 import { deSupabase } from '../../../utils/_metodos/supabase';
 import { Pagina } from '../../../utils/_models/pagina';
 import { ClienteComMotos, ClienteFormulario, MotoFormulario } from '../_modelos/cliente.model';
-import { MotosService } from './motos.service';
 
 const SELECT_CLIENTE = '*, motorcycles(*)';
 
@@ -14,10 +14,7 @@ const SELECT_CLIENTE = '*, motorcycles(*)';
 	providedIn: 'root',
 })
 export class ClientesService {
-	constructor(
-		private supabaseService: SupabaseService,
-		private motosService: MotosService,
-	) {}
+	constructor(private supabaseService: SupabaseService) {}
 
 	/** Busca por nome, telefone, CPF/CNPJ ou placa (função `search_clients`). */
 	public buscarPaginado(pagina: number, busca = ''): Observable<Pagina<ClienteComMotos>> {
@@ -53,8 +50,8 @@ export class ClientesService {
 	}
 
 	/**
-	 * Cria/atualiza o cliente, remove as motos tiradas do formulário e grava as demais.
-	 * Retorna o cliente recarregado com as motos.
+	 * Cria/atualiza o cliente, remove as motos tiradas do formulário e grava as demais, tudo numa
+	 * transação (RPC `save_client`): se algo falhar, nada é gravado. Retorna o cliente recarregado.
 	 */
 	public salvar(
 		id: string | null,
@@ -62,18 +59,13 @@ export class ClientesService {
 		motos: MotoFormulario[],
 		motosRemovidas: string[] = [],
 	): Observable<ClienteComMotos> {
-		const tabela = this.supabaseService.client.from('clients');
-		const gravarCliente = id
-			? deSupabase<{ id: string }>(tabela.update(cliente).eq('id', id).select('id').single())
-			: deSupabase<{ id: string }>(tabela.insert(cliente).select('id').single());
-
-		return gravarCliente.pipe(
-			switchMap(({ id: clienteId }) =>
-				(motosRemovidas.length ? this.motosService.excluir(motosRemovidas) : of(null)).pipe(
-					switchMap(() => (motos.length ? this.motosService.salvarDoCliente(clienteId, motos) : of([]))),
-					switchMap(() => this.buscarPorId(clienteId)),
-				),
-			),
-		);
+		return deSupabase<string>(
+			this.supabaseService.client.rpc('save_client', {
+				p_id: id as string,
+				p_client: cliente as unknown as Json,
+				p_motorcycles: motos.map(({ id: idMoto, ...moto }) => (idMoto ? { id: idMoto, ...moto } : moto)) as unknown as Json,
+				p_removed_motorcycles: motosRemovidas,
+			}),
+		).pipe(switchMap((clienteId) => this.buscarPorId(clienteId)));
 	}
 }

@@ -339,6 +339,7 @@ export type Database = {
 			[_ in never]: never;
 		};
 		Functions: {
+			save_client: { Args: { p_client: Json; p_id: string; p_motorcycles: Json; p_removed_motorcycles?: string[] }; Returns: string };
 			save_service_order: { Args: { p_items: Json; p_order: Json }; Returns: string };
 			search_clients: {
 				Args: { p_term?: string };

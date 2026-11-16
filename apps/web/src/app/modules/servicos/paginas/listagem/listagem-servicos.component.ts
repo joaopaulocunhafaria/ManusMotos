@@ -33,7 +33,7 @@ export class ListagemServicosComponent implements OnInit, OnDestroy {
 		private messageService: MessageService,
 	) {
 		this.formulario = this.formBuilder.nonNullable.group({
-			name: ['', [Validators.required, Validators.maxLength(100)]],
+			name: ['', [Validators.required, Validators.maxLength(100), Validators.pattern(/\S/)]],
 		});
 	}
 
