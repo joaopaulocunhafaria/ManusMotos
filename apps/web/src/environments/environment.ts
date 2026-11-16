@@ -3,6 +3,6 @@
 // NUNCA coloque a service_role/secret key no front-end.
 export const environment = {
 	production: true,
-	supabaseUrl: 'https://jirabjimylbuizgxxhcj.supabase.co/rest/v1/',
+	supabaseUrl: 'https://jirabjimylbuizgxxhcj.supabase.co',
 	supabaseKey: 'sb_publishable_I_PnQ54H-VIgVoAnLQzyLA_8jokyQnz',
 };

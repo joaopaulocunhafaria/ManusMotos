@@ -69,6 +69,7 @@ nvm use && npm install
 npm run db:start          # Supabase local (Docker)
 npm start                 # http://localhost:4200
 npm run build             # produção  |  npm run build-homolog -w @manus/web
+npm run build:vercel      # build do deploy (Vercel): valida que environment.ts aponta para o Supabase de produção
 npm test                  # Karma (watch)  |  npm run test:ci -w @manus/web (headless)
 npm run e2e               # Playwright: ponta a ponta no iPhone 8 (WebKit) contra o Supabase local
 npm run db:test           # pgTAP: regras do banco (supabase/tests/database)
@@ -162,6 +163,10 @@ seção **Testes de ponta a ponta**, que é critério de aceite.
 
 **Ambientes**: `environment.ts` (produção), `environment.homolog.ts`, `environment.development.ts` (Supabase local), trocados por
 `fileReplacements` no `angular.json`.
+
+**Deploy**: Vercel, configurado em `vercel.json` (raiz do repo, build `npm run build:vercel`, saída `apps/web/dist/web/browser`, fallback
+SPA). Todo deploy, inclusive preview, usa o Supabase de **produção**; `scripts/verificar-ambiente-producao.mjs` barra o build se o
+`environment.ts` mudar. A `supabaseUrl` é a URL **base** do projeto (sem `/rest/v1`). Passo a passo no `README.md`.
 
 ## ✅ Testes de ponta a ponta: critério de aceite
 

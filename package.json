@@ -13,6 +13,8 @@
 	"scripts": {
 		"start": "npm run start -w @manus/web",
 		"build": "npm run build -w @manus/web",
+		"build:vercel": "node scripts/verificar-ambiente-producao.mjs && npm run build -w @manus/web -- --configuration production",
+		"verificar:producao": "node scripts/verificar-ambiente-producao.mjs",
 		"test": "npm run test --workspaces --if-present",
 		"typecheck": "npm run typecheck --workspaces --if-present",
 		"e2e": "npm run e2e -w @manus/web",
