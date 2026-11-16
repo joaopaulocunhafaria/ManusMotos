@@ -1,0 +1,126 @@
+<div class="mx-auto flex w-full max-w-5xl flex-col gap-3">
+	<div class="flex items-center justify-between gap-2">
+		<h1 class="m-0 text-xl font-semibold">Agenda</h1>
+		<p-button label="Hoje" variant="outlined" size="small" styleClass="min-h-11" [disabled]="semanaAtual()" (onClick)="irParaHoje()" />
+	</div>
+
+	<div class="flex items-center gap-1">
+		<p-button
+			icon="pi pi-chevron-left"
+			variant="text"
+			styleClass="min-h-11 min-w-11"
+			ariaLabel="Semana anterior"
+			(onClick)="mudarSemana(-1)"
+		/>
+		<span class="flex-1 text-center font-medium">{{ rotulo() }}</span>
+		<p-button
+			icon="pi pi-chevron-right"
+			variant="text"
+			styleClass="min-h-11 min-w-11"
+			ariaLabel="Próxima semana"
+			(onClick)="mudarSemana(1)"
+		/>
+	</div>
+
+	<p-button label="Novo agendamento" icon="pi pi-plus" styleClass="w-full min-h-11" (onClick)="abrirNovo()" />
+
+	<app-estado
+		[modo]="estado() === 'erro' ? 'erro' : 'carregado'"
+		mensagemErro="Não foi possível carregar a agenda."
+		(recarregar)="carregar()"
+	></app-estado>
+
+	<div
+		*ngIf="estado() !== 'erro'"
+		class="rounded-lg border border-[var(--cor-borda)] bg-[var(--cor-superficie)] transition-opacity"
+		[class.opacity-60]="estado() === 'carregando'"
+		[attr.aria-busy]="estado() === 'carregando'"
+	>
+		<!-- Cabeçalho dos dias (fixo ao rolar) -->
+		<div
+			class="sticky top-[calc(3.5rem+1px+env(safe-area-inset-top,0px))] z-[5] grid grid-cols-[2rem_repeat(7,minmax(0,1fr))] rounded-t-lg border-b border-[var(--cor-borda)] bg-[var(--cor-superficie)]"
+		>
+			<div></div>
+			<div *ngFor="let dia of dias(); trackBy: identificarDia" class="flex min-w-0 flex-col items-center py-1">
+				<span class="text-[10px] text-gray-500 uppercase" [ngClass]="{ '!text-[var(--cor-primaria)]': dia.hoje }">
+					{{ dia.data | date: 'EEE' }}
+				</span>
+				<span
+					class="flex h-7 w-7 items-center justify-center rounded-full text-sm font-semibold"
+					[ngClass]="{ 'bg-[var(--cor-primaria)] text-white': dia.hoje }"
+				>
+					{{ dia.data | date: 'd' }}
+				</span>
+			</div>
+		</div>
+
+		<!-- Grade de horas -->
+		<div
+			class="linhas-hora relative grid grid-cols-[2rem_repeat(7,minmax(0,1fr))]"
+			[style.height.px]="alturaGrade()"
+			[style.background-size]="'100% ' + alturaHora + 'px'"
+		>
+			<div #ancoraRolagem class="pointer-events-none absolute left-0 h-px w-px scroll-mt-28" [style.top.px]="topoAncora()"></div>
+
+			<div class="relative">
+				<span
+					*ngFor="let hora of horas()"
+					class="absolute right-1 text-[10px] leading-none text-gray-500"
+					[style.top.px]="(hora - faixa()[0]) * alturaHora + 3"
+				>
+					{{ hora }}h
+				</span>
+			</div>
+
+			<div
+				*ngFor="let dia of dias(); trackBy: identificarDia"
+				class="relative min-w-0 cursor-pointer border-l border-[var(--cor-borda)]"
+				[ngClass]="{ 'bg-[var(--cor-primaria)]/5': dia.hoje }"
+				[attr.aria-label]="'Novo agendamento em ' + (dia.data | date: 'EEEE, d/MM')"
+				role="button"
+				(click)="aoTocarDia($event, dia)"
+			>
+				<div
+					*ngIf="dia.hoje && topoAgora() !== null"
+					class="pointer-events-none absolute right-0 left-0 z-[2] h-0.5 bg-red-500"
+					[style.top.px]="topoAgora()"
+				></div>
+
+				<button
+					*ngFor="let bloco of dia.blocos; trackBy: identificarBloco"
+					type="button"
+					class="absolute z-[1] flex flex-col overflow-hidden rounded border border-white bg-[var(--cor-primaria)] px-0.5 text-left text-[10px] leading-tight text-white sm:px-1 sm:text-xs"
+					[style.top.px]="bloco.topo"
+					[style.height.px]="bloco.altura"
+					[style.left.%]="bloco.esquerda"
+					[style.width.%]="bloco.largura"
+					[attr.aria-label]="rotuloBloco(bloco)"
+					(click)="abrirAgendamento($event, bloco)"
+				>
+					<span class="w-full truncate font-semibold">{{ bloco.agendamento.client_name }}</span>
+					<span *ngIf="bloco.altura >= 36" class="w-full truncate opacity-90" [ngClass]="{ 'hidden sm:block': bloco.largura < 100 }">
+						{{ bloco.inicio }}
+					</span>
+					<span *ngIf="bloco.agendamento.motorcycle_model && bloco.altura >= 52" class="hidden w-full truncate opacity-90 sm:block">
+						{{ bloco.agendamento.motorcycle_model }}
+					</span>
+				</button>
+			</div>
+		</div>
+	</div>
+</div>
+
+<p-drawer
+	[visible]="drawerAberto()"
+	(visibleChange)="drawerAberto.set($event)"
+	position="bottom"
+	[header]="contexto()?.agendamento ? 'Editar agendamento' : 'Novo agendamento'"
+	styleClass="!h-auto max-h-[90dvh] rounded-t-2xl"
+>
+	<app-formulario-agendamento
+		*ngIf="contexto() as contexto"
+		[contexto]="contexto"
+		(salvo)="aoConcluirFormulario()"
+		(excluido)="aoConcluirFormulario()"
+	></app-formulario-agendamento>
+</p-drawer>

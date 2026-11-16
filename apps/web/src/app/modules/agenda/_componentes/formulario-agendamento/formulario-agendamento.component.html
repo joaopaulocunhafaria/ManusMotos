@@ -1,0 +1,107 @@
+<form [formGroup]="formulario" (ngSubmit)="salvar()" class="area-segura-base flex flex-col gap-4">
+	<div class="flex flex-col gap-1">
+		<label for="agendamento-cliente" class="text-sm font-medium">Cliente *</label>
+		<p-autoComplete
+			formControlName="client_name"
+			inputId="agendamento-cliente"
+			optionLabel="name"
+			placeholder="Nome do cliente"
+			[suggestions]="sugestoesClientes()"
+			[delay]="500"
+			[minLength]="2"
+			[forceSelection]="false"
+			[fluid]="true"
+			[maxlength]="120"
+			appendTo="body"
+			inputStyleClass="min-h-11"
+			autocomplete="off"
+			(completeMethod)="buscarClientes($event)"
+			(onSelect)="aoSelecionarCliente($event)"
+		>
+			<ng-template let-cliente #item>
+				<div class="flex min-w-0 flex-col">
+					<span class="truncate font-medium">{{ cliente.name }}</span>
+					<span class="truncate text-sm text-gray-500">
+						{{ cliente.phone | telefone }}
+						<ng-container *ngFor="let moto of cliente.motorcycles">· {{ moto.model }}</ng-container>
+					</span>
+				</div>
+			</ng-template>
+		</p-autoComplete>
+		<small *ngIf="invalido('client_name')" class="text-red-600">Informe o nome do cliente (até 120 caracteres).</small>
+	</div>
+
+	<div class="grid grid-cols-2 gap-2">
+		<div class="flex min-w-0 flex-col gap-1">
+			<label for="agendamento-dia" class="text-sm font-medium">Dia *</label>
+			<input pInputText id="agendamento-dia" type="date" formControlName="scheduled_date" class="min-h-11 w-full min-w-0" />
+			<small *ngIf="invalido('scheduled_date')" class="text-red-600">Informe o dia.</small>
+		</div>
+		<div class="flex min-w-0 flex-col gap-1">
+			<label for="agendamento-hora" class="text-sm font-medium">Hora *</label>
+			<input pInputText id="agendamento-hora" type="time" step="900" formControlName="start_time" class="min-h-11 w-full min-w-0" />
+			<small *ngIf="invalido('start_time')" class="text-red-600">Informe a hora.</small>
+		</div>
+	</div>
+
+	<div class="flex flex-col gap-1">
+		<label for="agendamento-duracao" class="text-sm font-medium">Duração</label>
+		<p-select
+			inputId="agendamento-duracao"
+			formControlName="duration_minutes"
+			[options]="duracoes"
+			optionLabel="label"
+			optionValue="value"
+			appendTo="body"
+			styleClass="w-full min-h-11 items-center"
+		/>
+	</div>
+
+	<div class="flex flex-col gap-1">
+		<label for="agendamento-moto" class="text-sm font-medium">Modelo da moto</label>
+		<p-autoComplete
+			formControlName="motorcycle_model"
+			inputId="agendamento-moto"
+			placeholder="Ex.: Honda CG 160"
+			[suggestions]="sugestoesMotos()"
+			[completeOnFocus]="true"
+			[forceSelection]="false"
+			[fluid]="true"
+			[maxlength]="80"
+			appendTo="body"
+			inputStyleClass="min-h-11"
+			autocomplete="off"
+			(completeMethod)="buscarMotos($event)"
+		/>
+	</div>
+
+	<div class="flex flex-col gap-1">
+		<label for="agendamento-servico" class="text-sm font-medium">Serviço</label>
+		<p-autoComplete
+			formControlName="service"
+			inputId="agendamento-servico"
+			placeholder="Ex.: Troca de óleo"
+			[suggestions]="sugestoesServicos()"
+			[delay]="500"
+			[forceSelection]="false"
+			[fluid]="true"
+			[maxlength]="100"
+			appendTo="body"
+			inputStyleClass="min-h-11"
+			autocomplete="off"
+			(completeMethod)="buscarServicos($event)"
+		/>
+	</div>
+
+	<p-button type="submit" label="Salvar" icon="pi pi-check" styleClass="w-full min-h-11" [loading]="salvando()" />
+	<p-button
+		*ngIf="contexto.agendamento"
+		[label]="confirmandoExclusao() ? 'Toque de novo para confirmar' : 'Excluir agendamento'"
+		icon="pi pi-trash"
+		[variant]="confirmandoExclusao() ? undefined : 'text'"
+		severity="danger"
+		styleClass="w-full min-h-11"
+		[disabled]="salvando()"
+		(onClick)="excluir()"
+	/>
+</form>

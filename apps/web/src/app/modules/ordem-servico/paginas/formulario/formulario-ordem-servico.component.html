@@ -1,0 +1,330 @@
+<div class="mx-auto flex w-full max-w-xl flex-col gap-4">
+	<div class="flex items-center gap-2">
+		<p-button icon="pi pi-arrow-left" variant="text" styleClass="min-h-11 min-w-11" ariaLabel="Voltar" (onClick)="voltar()" />
+		<h1 class="m-0 text-xl font-semibold">{{ id ? 'Editar OS #' + (numero() ?? '') : 'Nova ordem de serviço' }}</h1>
+	</div>
+
+	<app-estado [modo]="estado()" mensagemErro="Não foi possível carregar a ordem de serviço." (recarregar)="carregar()"></app-estado>
+
+	<form *ngIf="estado() === 'carregado'" [formGroup]="formulario" (ngSubmit)="salvar()" class="flex flex-col gap-4">
+		<!-- Cliente e moto -->
+		<p-card header="Cliente e moto">
+			<div class="flex flex-col gap-4">
+				<div class="flex flex-col gap-1">
+					<label for="os-cliente" class="text-sm font-medium">Cliente *</label>
+					<p-autoComplete
+						formControlName="cliente"
+						inputId="os-cliente"
+						optionLabel="name"
+						placeholder="Nome, telefone, CPF ou placa"
+						[suggestions]="sugestoesClientes()"
+						[delay]="500"
+						[forceSelection]="true"
+						[showClear]="true"
+						[fluid]="true"
+						inputStyleClass="min-h-11"
+						emptyMessage="Nenhum cliente encontrado"
+						(completeMethod)="buscarClientes($event)"
+						(onSelect)="aoSelecionarCliente($event.value)"
+						(onClear)="aoLimparCliente()"
+					>
+						<ng-template let-cliente #item>
+							<div class="flex min-w-0 flex-col">
+								<span class="truncate font-medium">{{ cliente.name }}</span>
+								<span class="truncate text-sm text-gray-500">
+									{{ cliente.phone | telefone }}
+									<ng-container *ngFor="let moto of cliente.motorcycles">· {{ moto.plate | placa }}</ng-container>
+								</span>
+							</div>
+						</ng-template>
+					</p-autoComplete>
+					<small *ngIf="invalido('cliente')" class="text-red-600">Selecione um cliente da lista.</small>
+				</div>
+
+				<div class="flex flex-col gap-2">
+					<p-button
+						label="Novo cliente"
+						icon="pi pi-user-plus"
+						variant="outlined"
+						styleClass="w-full min-h-11"
+						(onClick)="abrirCliente(false)"
+					/>
+					<p-button
+						label="Editar cliente / adicionar moto"
+						icon="pi pi-pencil"
+						variant="outlined"
+						severity="secondary"
+						styleClass="w-full min-h-11"
+						[disabled]="!clienteAtual"
+						(onClick)="abrirCliente(true)"
+					/>
+				</div>
+
+				<div class="flex flex-col gap-1">
+					<label for="os-moto" class="text-sm font-medium">Moto *</label>
+					<p-select
+						inputId="os-moto"
+						formControlName="motorcycle_id"
+						[options]="motos()"
+						optionValue="id"
+						placeholder="Selecione a moto"
+						emptyMessage="Selecione um cliente primeiro"
+						styleClass="w-full min-h-11"
+					>
+						<ng-template let-moto #item>{{ moto.model }} · {{ moto.color }} · {{ moto.plate | placa }}</ng-template>
+						<ng-template let-moto #selectedItem>{{ moto.model }} · {{ moto.plate | placa }}</ng-template>
+					</p-select>
+					<small *ngIf="invalido('motorcycle_id')" class="text-red-600">Selecione a moto.</small>
+				</div>
+
+				<div class="flex flex-col gap-1">
+					<label for="os-km" class="text-sm font-medium">KM atual</label>
+					<input
+						pInputText
+						id="os-km"
+						type="number"
+						inputmode="numeric"
+						min="0"
+						formControlName="mileage"
+						placeholder="Ex.: 23500"
+						class="w-full"
+					/>
+					<small *ngIf="invalido('mileage')" class="text-red-600">KM inválido.</small>
+				</div>
+			</div>
+		</p-card>
+
+		<!-- Serviços -->
+		<p-card header="Serviços">
+			<div class="flex flex-col gap-3" formArrayName="itens">
+				<div
+					*ngFor="let item of itens.controls; let i = index"
+					[formGroupName]="i"
+					class="flex flex-col gap-2 rounded-lg border border-[var(--cor-borda)] p-3"
+				>
+					<div class="flex items-start gap-2">
+						<div class="flex min-w-0 flex-1 flex-col gap-1">
+							<label [for]="'os-servico-' + i" class="text-sm font-medium">Serviço {{ i + 1 }} *</label>
+							<p-autoComplete
+								formControlName="servico"
+								[inputId]="'os-servico-' + i"
+								optionLabel="name"
+								placeholder="Buscar serviço"
+								[suggestions]="itemBuscandoServico() === i ? sugestoesServicos() : []"
+								[delay]="500"
+								[dropdown]="true"
+								dropdownMode="blank"
+								dropdownAriaLabel="Ver serviços"
+								[forceSelection]="true"
+								[fluid]="true"
+								inputStyleClass="min-h-11"
+								emptyMessage="Nenhum serviço encontrado"
+								(completeMethod)="buscarServicos($event, i)"
+							/>
+							<small *ngIf="itemInvalido(item, 'servico')" class="text-red-600">Selecione um serviço da lista.</small>
+						</div>
+						<p-button
+							icon="pi pi-trash"
+							severity="danger"
+							variant="text"
+							styleClass="mt-6 min-h-11 min-w-11"
+							ariaLabel="Remover serviço"
+							(onClick)="removerItem(i)"
+						/>
+					</div>
+					<div class="flex flex-col gap-1">
+						<label [for]="'os-preco-' + i" class="text-sm font-medium">Preço *</label>
+						<p-inputNumber
+							formControlName="price"
+							[inputId]="'os-preco-' + i"
+							mode="currency"
+							currency="BRL"
+							locale="pt-BR"
+							[min]="0"
+							[fluid]="true"
+							inputStyleClass="min-h-11"
+							placeholder="R$ 0,00"
+						/>
+						<small *ngIf="itemInvalido(item, 'price')" class="text-red-600">Informe o preço.</small>
+					</div>
+				</div>
+
+				<div class="flex flex-col gap-2">
+					<p-button
+						label="Adicionar serviço"
+						icon="pi pi-plus"
+						variant="outlined"
+						styleClass="w-full min-h-11"
+						(onClick)="adicionarItem()"
+					/>
+					<p-button
+						label="Novo serviço no catálogo"
+						icon="pi pi-wrench"
+						variant="outlined"
+						severity="secondary"
+						styleClass="w-full min-h-11"
+						(onClick)="abrirNovoServico()"
+					/>
+				</div>
+
+				<div class="flex items-baseline justify-between border-0 border-t border-solid border-[var(--cor-borda)] pt-3">
+					<span class="font-medium">Total</span>
+					<span class="text-xl font-bold">{{ total() | currency }}</span>
+				</div>
+			</div>
+		</p-card>
+
+		<!-- Pagamento -->
+		<p-card header="Pagamento">
+			<div class="flex flex-col gap-4">
+				<div class="flex flex-col gap-1">
+					<span id="os-forma-label" class="text-sm font-medium">Forma de pagamento *</span>
+					<p-selectButton
+						formControlName="payment_method"
+						[options]="opcoesFormaPagamento"
+						optionLabel="label"
+						optionValue="valor"
+						[allowEmpty]="false"
+						ariaLabelledBy="os-forma-label"
+						styleClass="forma-pagamento"
+					/>
+				</div>
+
+				<div class="flex flex-col gap-1">
+					<label for="os-entrada" class="text-sm font-medium">Entrada (se houver)</label>
+					<p-inputNumber
+						formControlName="down_payment"
+						inputId="os-entrada"
+						mode="currency"
+						currency="BRL"
+						locale="pt-BR"
+						[min]="0"
+						[fluid]="true"
+						inputStyleClass="min-h-11"
+						placeholder="R$ 0,00"
+					/>
+					<small *ngIf="erroGrupo('entradaMaiorQueTotal', 'down_payment')" class="text-red-600">
+						A entrada não pode ser maior que o total.
+					</small>
+				</div>
+
+				<div *ngIf="formaPagamento() === 'installments'" class="flex flex-col gap-1">
+					<label for="os-parcelas" class="text-sm font-medium">Parcelas *</label>
+					<p-select
+						inputId="os-parcelas"
+						formControlName="installments"
+						[options]="opcoesParcelas()"
+						optionLabel="label"
+						optionValue="valor"
+						placeholder="Quantidade de parcelas"
+						styleClass="w-full min-h-11"
+					/>
+					<small
+						*ngIf="erroGrupo('parcelasObrigatorias', 'installments') || erroGrupo('parcelasObrigatorias', 'payment_method')"
+						class="text-red-600"
+					>
+						Escolha a quantidade de parcelas.
+					</small>
+				</div>
+
+				<dl class="m-0 flex flex-col gap-1 rounded-md bg-gray-50 p-3 text-sm">
+					<div class="flex justify-between gap-3">
+						<dt>Total</dt>
+						<dd class="m-0 font-medium">{{ total() | currency }}</dd>
+					</div>
+					<div *ngIf="entrada() > 0" class="flex justify-between gap-3">
+						<dt>Entrada</dt>
+						<dd class="m-0 font-medium">− {{ entrada() | currency }}</dd>
+					</div>
+					<div class="flex justify-between gap-3">
+						<dt>Restante</dt>
+						<dd class="m-0 font-semibold">{{ saldo() | currency }}</dd>
+					</div>
+					<div *ngIf="formaPagamento() === 'installments' && parcelas()" class="flex justify-between gap-3">
+						<dt>Parcelas</dt>
+						<dd class="m-0 font-medium">{{ parcelas() }}x de {{ valorDaParcela() | currency }}</dd>
+					</div>
+				</dl>
+			</div>
+		</p-card>
+
+		<!-- Prazo e observações -->
+		<p-card header="Prazo e observações">
+			<div class="flex flex-col gap-4">
+				<div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+					<div class="flex min-w-0 flex-col gap-1">
+						<label for="os-data" class="text-sm font-medium">Data *</label>
+						<input pInputText id="os-data" type="date" formControlName="order_date" class="min-h-11 w-full" />
+						<small *ngIf="invalido('order_date')" class="text-red-600">Informe a data.</small>
+					</div>
+					<div class="flex min-w-0 flex-col gap-1">
+						<label for="os-prazo" class="text-sm font-medium">Tempo estimado</label>
+						<input
+							pInputText
+							id="os-prazo"
+							formControlName="estimated_time"
+							maxlength="80"
+							placeholder="Ex.: 2 dias, até sexta"
+							class="w-full"
+						/>
+					</div>
+				</div>
+
+				<div class="flex flex-col gap-1">
+					<label for="os-obs-cliente" class="text-sm font-medium">Observação para o cliente</label>
+					<textarea pTextarea id="os-obs-cliente" formControlName="customer_notes" rows="3" maxlength="2000" class="w-full"></textarea>
+					<small class="text-gray-500">Aparece na versão enviada ao cliente.</small>
+				</div>
+
+				<div class="flex flex-col gap-1">
+					<label for="os-obs" class="text-sm font-medium">Observação interna</label>
+					<textarea pTextarea id="os-obs" formControlName="notes" rows="3" maxlength="2000" class="w-full"></textarea>
+					<small class="text-gray-500">Só para a oficina; não vai para o cliente.</small>
+				</div>
+			</div>
+		</p-card>
+
+		<p-button
+			type="submit"
+			[label]="id ? 'Salvar alterações' : 'Criar ordem de serviço'"
+			icon="pi pi-check"
+			styleClass="w-full min-h-11"
+			[loading]="salvando()"
+		/>
+	</form>
+</div>
+
+<!-- Novo cliente / editar cliente (adicionar moto) -->
+<p-drawer
+	[visible]="drawerCliente()"
+	(visibleChange)="drawerCliente.set($event)"
+	position="bottom"
+	[header]="clienteEmEdicao() ? 'Editar cliente' : 'Novo cliente'"
+	styleClass="!h-[90%] rounded-t-2xl"
+>
+	<div class="area-segura-base">
+		<app-formulario-cliente
+			*ngIf="drawerCliente()"
+			[cliente]="clienteEmEdicao()"
+			rotuloSalvar="Salvar e usar nesta OS"
+			(salvo)="aoSalvarCliente($event)"
+		></app-formulario-cliente>
+	</div>
+</p-drawer>
+
+<!-- Novo serviço no catálogo -->
+<p-drawer
+	[visible]="drawerServico()"
+	(visibleChange)="drawerServico.set($event)"
+	position="bottom"
+	header="Novo serviço no catálogo"
+	styleClass="!h-auto rounded-t-2xl"
+>
+	<form [formGroup]="formularioServico" (ngSubmit)="criarServico()" class="area-segura-base flex flex-col gap-4">
+		<div class="flex flex-col gap-1">
+			<label for="os-novo-servico" class="text-sm font-medium">Nome do serviço *</label>
+			<input pInputText id="os-novo-servico" formControlName="name" maxlength="100" autocomplete="off" class="w-full" />
+		</div>
+		<p-button type="submit" label="Cadastrar e adicionar" icon="pi pi-check" styleClass="w-full min-h-11" [loading]="criandoServico()" />
+	</form>
+</p-drawer>

@@ -1,0 +1,170 @@
+<div class="mx-auto flex w-full max-w-xl flex-col gap-4">
+	<div>
+		<h1 class="m-0 text-xl font-semibold">Identidade visual</h1>
+		<p class="mt-1 mb-0 text-sm text-gray-500">Nome, contato e cores da sua mecânica. Valem para todo o app.</p>
+	</div>
+
+	<app-estado [modo]="estado()" mensagemErro="Não foi possível carregar a identidade visual." (recarregar)="carregar()"></app-estado>
+
+	<form *ngIf="estado() === 'carregado'" [formGroup]="formulario" (ngSubmit)="salvar()" class="flex flex-col gap-4">
+		<!-- Pré-visualização -->
+		<section
+			aria-label="Pré-visualização"
+			class="overflow-hidden border"
+			[ngStyle]="{
+				'background-color': previa().background_color,
+				'border-color': previa().border_color,
+				color: previa().text_color,
+				'font-family': fontePrevia(),
+				'border-radius': raioPrevia(),
+			}"
+		>
+			<div
+				class="flex items-center justify-between border-b px-4 py-3"
+				[ngStyle]="{ 'background-color': previa().surface_color, 'border-color': previa().border_color }"
+			>
+				<span class="min-w-0 truncate text-lg font-bold" [ngStyle]="{ color: previa().primary_color }">
+					{{ previa().shop_name || 'Nome da mecânica' }}
+				</span>
+				<i class="pi pi-sign-out" [ngStyle]="{ color: previa().secondary_color }"></i>
+			</div>
+			<div class="flex flex-col gap-2 p-4">
+				<span class="text-base font-semibold">Revisão completa</span>
+				<span class="text-sm" [ngStyle]="{ color: previa().secondary_color }">{{ previa().subtitle || 'Subtítulo da mecânica' }}</span>
+				<span
+					class="mt-1 flex min-h-11 items-center justify-center px-4 font-medium text-white"
+					[ngStyle]="{ 'background-color': previa().primary_color, 'border-radius': raioPrevia() }"
+				>
+					Botão principal
+				</span>
+			</div>
+		</section>
+
+		<p-message *ngFor="let aviso of avisosContraste()" severity="warn" [text]="aviso" />
+
+		<!-- Mecânica -->
+		<p-card header="Mecânica">
+			<div class="flex flex-col gap-4">
+				<div class="flex flex-col gap-1">
+					<label for="shop_name" class="text-sm font-medium">Título da mecânica *</label>
+					<input pInputText id="shop_name" formControlName="shop_name" maxlength="60" autocomplete="organization" class="w-full" />
+					<small *ngIf="invalido('shop_name')" class="text-red-600">Informe o título (até 60 caracteres).</small>
+				</div>
+
+				<div class="flex flex-col gap-1">
+					<label for="subtitle" class="text-sm font-medium">Subtítulo / slogan</label>
+					<input pInputText id="subtitle" formControlName="subtitle" maxlength="120" class="w-full" />
+				</div>
+
+				<div class="flex flex-col gap-1">
+					<label for="phone" class="text-sm font-medium">Telefone</label>
+					<input
+						pInputText
+						id="phone"
+						type="tel"
+						inputmode="tel"
+						autocomplete="tel"
+						formControlName="phone"
+						maxlength="20"
+						placeholder="(00) 0000-0000"
+						class="w-full"
+					/>
+					<small *ngIf="invalido('phone')" class="text-red-600">Telefone com DDD (10 ou 11 dígitos).</small>
+				</div>
+
+				<div class="flex flex-col gap-1">
+					<label for="whatsapp" class="text-sm font-medium">WhatsApp</label>
+					<input
+						pInputText
+						id="whatsapp"
+						type="tel"
+						inputmode="tel"
+						autocomplete="tel"
+						formControlName="whatsapp"
+						maxlength="20"
+						placeholder="(00) 00000-0000"
+						class="w-full"
+					/>
+					<small *ngIf="invalido('whatsapp')" class="text-red-600">WhatsApp com DDD (10 ou 11 dígitos).</small>
+				</div>
+			</div>
+		</p-card>
+
+		<!-- Cores -->
+		<p-card header="Cores">
+			<div class="flex flex-col gap-4">
+				<div *ngFor="let cor of cores" class="flex flex-col gap-1">
+					<label [for]="cor.campo" class="text-sm font-medium">{{ cor.label }}</label>
+					<div class="flex items-center gap-3">
+						<input
+							type="color"
+							class="seletor-cor h-11 w-11 shrink-0 cursor-pointer"
+							[formControlName]="cor.campo"
+							[attr.aria-label]="'Escolher cor ' + cor.label"
+						/>
+						<input
+							pInputText
+							[id]="cor.campo"
+							[formControlName]="cor.campo"
+							maxlength="7"
+							autocapitalize="off"
+							autocomplete="off"
+							spellcheck="false"
+							class="w-full min-w-0 font-mono uppercase"
+						/>
+					</div>
+					<small *ngIf="invalido(cor.campo); else descricao" class="text-red-600">Use o formato #RRGGBB.</small>
+					<ng-template #descricao>
+						<small class="text-gray-500">{{ cor.descricao }}</small>
+					</ng-template>
+				</div>
+			</div>
+		</p-card>
+
+		<!-- Tipografia e forma -->
+		<p-card header="Fonte e formato">
+			<div class="flex flex-col gap-4">
+				<div class="flex flex-col gap-1">
+					<label for="font_family" class="text-sm font-medium">Fonte</label>
+					<p-select
+						inputId="font_family"
+						formControlName="font_family"
+						[options]="fontes"
+						optionLabel="label"
+						optionValue="valor"
+						appendTo="body"
+						styleClass="w-full min-h-11"
+					/>
+				</div>
+
+				<div class="flex flex-col gap-1">
+					<span class="text-sm font-medium">Arredondamento</span>
+					<p-selectbutton
+						formControlName="border_radius"
+						[options]="raios"
+						optionLabel="label"
+						optionValue="valor"
+						[allowEmpty]="false"
+						styleClass="seletor-raio w-full"
+					/>
+				</div>
+			</div>
+		</p-card>
+
+		<div class="flex flex-col gap-2">
+			<p-button type="submit" label="Salvar" icon="pi pi-check" [loading]="salvando()" styleClass="w-full min-h-11" />
+			<p-button
+				type="button"
+				label="Restaurar cores padrão"
+				icon="pi pi-replay"
+				variant="outlined"
+				severity="secondary"
+				[disabled]="salvando()"
+				styleClass="w-full min-h-11"
+				(onClick)="restaurarPadrao()"
+			/>
+		</div>
+	</form>
+</div>
+
+<p-confirmdialog [style]="{ width: 'calc(100vw - 2rem)', maxWidth: '24rem' }" />

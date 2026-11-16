@@ -1,0 +1,16 @@
+<ng-container [ngSwitch]="modo">
+	<div *ngSwitchCase="'carregando'" class="flex justify-center py-10">
+		<p-progressSpinner styleClass="h-10 w-10" strokeWidth="4" />
+	</div>
+
+	<div *ngSwitchCase="'vazio'" class="flex flex-col items-center gap-2 py-10 text-center text-gray-500">
+		<i class="pi pi-inbox text-3xl"></i>
+		<p class="m-0">{{ mensagemVazio }}</p>
+	</div>
+
+	<div *ngSwitchCase="'erro'" class="flex flex-col items-center gap-3 py-10 text-center">
+		<i class="pi pi-exclamation-triangle text-3xl text-red-500"></i>
+		<p class="m-0">{{ mensagemErro }}</p>
+		<p-button label="Tentar novamente" icon="pi pi-refresh" variant="outlined" (onClick)="recarregar.emit()" />
+	</div>
+</ng-container>

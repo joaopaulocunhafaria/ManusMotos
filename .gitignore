@@ -1,0 +1,36 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+out-tsc/
+coverage/
+.angular/
+
+# Env / secrets — NUNCA commitar
+.env
+.env.*
+!.env.example
+apps/web/src/environments/environment.local.ts
+
+# Supabase (local)
+supabase/.branches
+supabase/.temp
+supabase/.env
+
+# Logs
+npm-debug.log*
+*.log
+
+# IDEs
+.idea/
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+.history/
+
+# OS
+.DS_Store
+Thumbs.db

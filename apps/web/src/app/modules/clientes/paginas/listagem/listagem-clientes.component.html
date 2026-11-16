@@ -1,0 +1,59 @@
+<div class="mx-auto flex w-full max-w-xl flex-col gap-4">
+	<div>
+		<h1 class="m-0 text-xl font-semibold">Clientes</h1>
+		<p class="mt-1 mb-0 text-sm text-gray-500">Clientes e suas motos.</p>
+	</div>
+
+	<p-button label="Novo cliente" icon="pi pi-plus" styleClass="w-full min-h-11" (onClick)="abrir()" />
+
+	<p-iconfield>
+		<p-inputicon styleClass="pi pi-search" />
+		<input
+			pInputText
+			type="search"
+			enterkeyhint="search"
+			placeholder="Nome, telefone, CPF/CNPJ ou placa"
+			aria-label="Buscar cliente"
+			class="min-h-11 w-full"
+			[value]="busca"
+			(input)="aoDigitarBusca($any($event.target).value)"
+		/>
+	</p-iconfield>
+
+	<app-estado
+		[modo]="estado()"
+		mensagemVazio="Nenhum cliente encontrado."
+		mensagemErro="Não foi possível carregar os clientes."
+		(recarregar)="carregar()"
+	></app-estado>
+
+	<ul *ngIf="estado() === 'carregado'" class="m-0 flex list-none flex-col gap-2 p-0">
+		<li *ngFor="let cliente of clientes()">
+			<button
+				type="button"
+				class="flex min-h-14 w-full cursor-pointer items-center gap-3 rounded-lg border border-[var(--cor-borda)] bg-[var(--cor-superficie)] px-4 py-3 text-left text-[var(--cor-texto)]"
+				(click)="abrir(cliente)"
+			>
+				<div class="flex min-w-0 flex-1 flex-col gap-1">
+					<span class="truncate text-base font-medium">{{ cliente.name }}</span>
+					<span class="text-sm text-gray-500">{{ cliente.phone | telefone }}</span>
+					<span class="flex flex-wrap gap-1">
+						<span *ngFor="let moto of cliente.motorcycles" class="rounded bg-gray-100 px-2 py-0.5 font-mono text-xs text-gray-700">
+							{{ moto.plate | placa }}
+						</span>
+					</span>
+				</div>
+				<i class="pi pi-chevron-right text-gray-400"></i>
+			</button>
+		</li>
+	</ul>
+
+	<p-button
+		*ngIf="estado() === 'carregado' && clientes().length < total()"
+		label="Carregar mais"
+		variant="outlined"
+		styleClass="w-full min-h-11"
+		[loading]="carregandoMais()"
+		(onClick)="carregarMais()"
+	/>
+</div>

@@ -1,0 +1,8 @@
+# Alvo principal: iPhone 8 (Safari iOS 16.x — última versão suportada pelo aparelho é 16.7)
+iOS >= 16.4
+Safari >= 16.4
+last 2 Chrome versions
+last 2 ChromeAndroid versions
+last 2 Edge major versions
+last 2 Firefox major versions
+Firefox ESR

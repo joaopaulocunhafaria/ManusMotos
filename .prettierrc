@@ -1,0 +1,17 @@
+{
+	"semi": true,
+	"trailingComma": "all",
+	"singleQuote": true,
+	"printWidth": 140,
+	"useTabs": true,
+	"tabWidth": 3,
+	"proseWrap": "always",
+	"bracketSameLine": false,
+	"arrowParens": "always",
+	"htmlWhitespaceSensitivity": "ignore",
+	"plugins": ["prettier-plugin-tailwindcss"],
+	"overrides": [
+		{ "files": "*.html", "options": { "parser": "angular" } },
+		{ "files": ["*.md", "*.yml", "*.yaml"], "options": { "useTabs": false, "tabWidth": 2 } }
+	]
+}

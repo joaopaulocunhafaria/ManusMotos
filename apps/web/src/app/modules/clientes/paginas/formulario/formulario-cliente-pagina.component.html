@@ -1,0 +1,10 @@
+<div class="mx-auto flex w-full max-w-xl flex-col gap-4">
+	<div class="flex items-center gap-2">
+		<p-button icon="pi pi-arrow-left" variant="text" styleClass="min-h-11 min-w-11" ariaLabel="Voltar" (onClick)="voltar()" />
+		<h1 class="m-0 text-xl font-semibold">{{ cliente() ? 'Editar cliente' : 'Novo cliente' }}</h1>
+	</div>
+
+	<app-estado [modo]="estado()" mensagemErro="Não foi possível carregar o cliente." (recarregar)="carregar()"></app-estado>
+
+	<app-formulario-cliente *ngIf="estado() === 'carregado'" [cliente]="cliente()" (salvo)="aoSalvar($event)"></app-formulario-cliente>
+</div>

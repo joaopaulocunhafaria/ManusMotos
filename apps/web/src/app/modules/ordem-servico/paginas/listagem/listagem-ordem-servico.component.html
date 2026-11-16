@@ -1,0 +1,58 @@
+<div class="mx-auto flex w-full max-w-xl flex-col gap-4">
+	<div>
+		<h1 class="m-0 text-xl font-semibold">Ordens de serviço</h1>
+		<p class="mt-1 mb-0 text-sm text-gray-500">Orçamentos e serviços em andamento.</p>
+	</div>
+
+	<p-button label="Nova ordem de serviço" icon="pi pi-plus" styleClass="w-full min-h-11" (onClick)="novaOrdem()" />
+
+	<div class="flex flex-col gap-2">
+		<p-iconfield>
+			<p-inputicon styleClass="pi pi-search" />
+			<input
+				pInputText
+				type="search"
+				enterkeyhint="search"
+				placeholder="Nº da OS, cliente ou placa"
+				aria-label="Buscar ordem de serviço"
+				class="min-h-11 w-full"
+				[value]="busca"
+				(input)="aoDigitarBusca($any($event.target).value)"
+			/>
+		</p-iconfield>
+
+		<p-select
+			[options]="opcoesStatus"
+			optionLabel="label"
+			optionValue="valor"
+			[(ngModel)]="status"
+			[showClear]="true"
+			placeholder="Todos os status"
+			ariaLabel="Filtrar por status"
+			styleClass="w-full min-h-11"
+			(onChange)="aoMudarStatus()"
+		/>
+	</div>
+
+	<app-estado
+		[modo]="estado()"
+		mensagemVazio="Nenhuma ordem de serviço encontrada."
+		mensagemErro="Não foi possível carregar as ordens de serviço."
+		(recarregar)="carregar()"
+	></app-estado>
+
+	<ul *ngIf="estado() === 'carregado'" class="m-0 flex list-none flex-col gap-2 p-0">
+		<li *ngFor="let ordem of ordens()">
+			<app-cartao-ordem-servico [ordem]="ordem"></app-cartao-ordem-servico>
+		</li>
+	</ul>
+
+	<p-button
+		*ngIf="estado() === 'carregado' && ordens().length < total()"
+		label="Carregar mais"
+		variant="outlined"
+		styleClass="w-full min-h-11"
+		[loading]="carregandoMais()"
+		(onClick)="carregarMais()"
+	/>
+</div>

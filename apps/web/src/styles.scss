@@ -1,0 +1,72 @@
+@use 'tailwindcss';
+@use 'primeicons/primeicons.css';
+
+/* Cores e medidas globais — use via var(--...) nos templates/Tailwind.
+   São os padrões: o TemaService sobrescreve com a identidade visual salva em design_settings. */
+:root {
+	--cor-primaria: #f97316;
+	--cor-secundaria: #1f2937;
+	--cor-superficie: #ffffff;
+	--cor-texto: #1f2937;
+	--cor-borda: #e5e7eb;
+	--cor-fundo: #f7f7fc;
+	--p-font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+}
+
+html {
+	-webkit-text-size-adjust: 100%;
+	text-size-adjust: 100%;
+}
+
+body {
+	margin: 0;
+	min-height: 100vh;
+	min-height: 100dvh;
+	font-family: var(--p-font-family);
+	color: var(--cor-texto);
+	background: var(--cor-fundo);
+	-webkit-tap-highlight-color: transparent;
+	overscroll-behavior-y: none;
+}
+
+/* iOS Safari dá zoom automático em inputs com fonte < 16px: mantenha 16px no mobile */
+input,
+select,
+textarea,
+.p-inputtext {
+	font-size: 16px;
+}
+
+/* Altura de tela real no iPhone (barra do Safari), com fallback para iOS antigos */
+@utility tela-cheia {
+	min-height: 100vh;
+	min-height: 100dvh;
+}
+
+/* Safe areas (notch / home indicator / modo standalone) */
+@utility area-segura-topo {
+	padding-top: max(0.5rem, env(safe-area-inset-top));
+}
+
+@utility area-segura-base {
+	padding-bottom: env(safe-area-inset-bottom);
+}
+
+/* Impressão/PDF da versão do cliente: o DetalheOrdemServico copia o card para `.area-impressao` no <body>. */
+@media screen {
+	.area-impressao {
+		display: none;
+	}
+}
+
+@media print {
+	body > *:not(.area-impressao) {
+		display: none !important;
+	}
+
+	.area-impressao {
+		display: block;
+		max-width: 24rem;
+		margin: 0 auto;
+	}
+}
