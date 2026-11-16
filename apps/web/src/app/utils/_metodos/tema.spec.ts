@@ -3,7 +3,7 @@ import { contrasteWcag, fontePorValor, IDENTIDADE_PADRAO, raioParaPx, urlGoogleF
 describe('tema', () => {
 	it('contrasteWcag: preto e branco = 21, cor igual = 1', () => {
 		expect(contrasteWcag('#000000', '#ffffff')).toBeCloseTo(21, 1);
-		expect(contrasteWcag('#f97316', '#f97316')).toBeCloseTo(1, 5);
+		expect(contrasteWcag('#3B5334', '#3B5334')).toBeCloseTo(1, 5);
 	});
 
 	it('raioParaPx usa a escala e cai para "medium" se desconhecido', () => {

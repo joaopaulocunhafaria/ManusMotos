@@ -9,7 +9,7 @@ create table public.design_settings (
   subtitle          text check (char_length(subtitle) <= 120),
   phone             text check (char_length(phone) <= 20),
   whatsapp          text check (char_length(whatsapp) <= 20),
-  primary_color     text not null default '#f97316',
+  primary_color     text not null default '#3B5334',
   secondary_color   text not null default '#1f2937',
   background_color  text not null default '#f7f7fc',
   surface_color     text not null default '#ffffff',
