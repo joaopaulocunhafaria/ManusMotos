@@ -46,7 +46,7 @@ export const IDENTIDADE_PADRAO: IdentidadeVisual = {
 	subtitle: null,
 	phone: null,
 	whatsapp: null,
-	primary_color: '#f97316',
+	primary_color: '#3B5334',
 	secondary_color: '#1f2937',
 	background_color: '#f7f7fc',
 	surface_color: '#ffffff',

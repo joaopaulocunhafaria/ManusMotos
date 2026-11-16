@@ -30,7 +30,7 @@ export class FormularioClienteComponent implements OnChanges {
 		private messageService: MessageService,
 	) {
 		this.formulario = this.formBuilder.nonNullable.group({
-			name: ['', [Validators.required, Validators.maxLength(120)]],
+			name: ['', [Validators.required, Validators.maxLength(120), Validators.pattern(/\S/)]],
 			phone: ['', [Validators.required, telefone()]],
 			document: ['', [Validators.required, cpfCnpj()]],
 			address: ['', [Validators.maxLength(300)]],
@@ -51,8 +51,8 @@ export class FormularioClienteComponent implements OnChanges {
 		this.motos.push(
 			this.formBuilder.nonNullable.group({
 				id: [moto?.id ?? (null as string | null)],
-				model: [moto?.model ?? '', [Validators.required, Validators.maxLength(80)]],
-				color: [moto?.color ?? '', [Validators.required, Validators.maxLength(40)]],
+				model: [moto?.model ?? '', [Validators.required, Validators.maxLength(80), Validators.pattern(/\S/)]],
+				color: [moto?.color ?? '', [Validators.required, Validators.maxLength(40), Validators.pattern(/\S/)]],
 				plate: [moto?.plate ? formatarPlaca(moto.plate) : '', [Validators.required, placa()]],
 			}),
 		);
@@ -119,7 +119,7 @@ export class FormularioClienteComponent implements OnChanges {
 					this.messageService.add({
 						severity: 'error',
 						summary: mensagemErro(erro, 'Não foi possível salvar o cliente.'),
-						detail: 'CPF/CNPJ e placa não podem se repetir; motos com OS não podem ser removidas.',
+						detail: 'Nada foi gravado. CPF/CNPJ e placa não podem se repetir; motos com OS não podem ser removidas.',
 					});
 				},
 			});

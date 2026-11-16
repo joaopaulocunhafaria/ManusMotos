@@ -34,3 +34,7 @@ npm-debug.log*
 # OS
 .DS_Store
 Thumbs.db
+
+# Testes E2E (Playwright)
+apps/web/e2e-resultados/
+apps/web/e2e-relatorio/

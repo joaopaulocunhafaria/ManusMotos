@@ -102,7 +102,7 @@ export class FormularioOrdemServicoComponent implements OnInit, OnDestroy {
 			{ validators: [validarPagamento()] },
 		);
 		this.formularioServico = this.formBuilder.nonNullable.group({
-			name: ['', [Validators.required, Validators.maxLength(100)]],
+			name: ['', [Validators.required, Validators.maxLength(100), Validators.pattern(/\S/)]],
 		});
 	}
 
@@ -169,13 +169,16 @@ export class FormularioOrdemServicoComponent implements OnInit, OnDestroy {
 		this.drawerCliente.set(true);
 	}
 
+	/** Depois de salvar no painel: usa o cliente e seleciona a moto recém-cadastrada (ou mantém a atual). */
 	public aoSalvarCliente(cliente: ClienteComMotos): void {
 		const motoAtual = this.formulario.get('motorcycle_id')!.value as string | null;
+		const idsAnteriores = new Set(this.motos().map((moto) => moto.id));
+		const motoNova = cliente.motorcycles.find((moto) => !idsAnteriores.has(moto.id));
+		const motoAindaExiste = cliente.motorcycles.some((moto) => moto.id === motoAtual);
 		this.formulario.get('cliente')!.setValue(cliente);
 		this.motos.set(cliente.motorcycles);
-		const motoAindaExiste = cliente.motorcycles.some((moto) => moto.id === motoAtual);
-		const ultimaMoto = cliente.motorcycles[cliente.motorcycles.length - 1];
-		this.formulario.get('motorcycle_id')!.setValue(motoAindaExiste ? motoAtual : (ultimaMoto?.id ?? null));
+		const escolhida = motoNova ?? (motoAindaExiste ? cliente.motorcycles.find((moto) => moto.id === motoAtual) : cliente.motorcycles[0]);
+		this.formulario.get('motorcycle_id')!.setValue(escolhida?.id ?? null);
 		this.drawerCliente.set(false);
 	}
 
@@ -279,6 +282,10 @@ export class FormularioOrdemServicoComponent implements OnInit, OnDestroy {
 
 	public invalido(campo: string): boolean {
 		return campoInvalido(this.formulario.get(campo));
+	}
+
+	public servicoNovoInvalido(): boolean {
+		return campoInvalido(this.formularioServico.get('name'));
 	}
 
 	public itemInvalido(grupo: AbstractControl, campo: string): boolean {

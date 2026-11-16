@@ -9,14 +9,18 @@
 		<router-outlet></router-outlet>
 	</main>
 
-	<nav class="area-segura-base sticky bottom-0 z-10 flex border-t border-[var(--cor-borda)] bg-[var(--cor-superficie)]">
+	<nav
+		aria-label="Navegação principal"
+		class="area-segura-base sticky bottom-0 z-10 flex border-t border-[var(--cor-borda)] bg-[var(--cor-superficie)]"
+	>
 		<a
 			*ngFor="let item of itensNavegacao"
 			[routerLink]="item.rota"
 			routerLinkActive="text-[var(--cor-primaria)]"
+			ariaCurrentWhenActive="page"
 			class="flex min-h-14 flex-1 flex-col items-center justify-center gap-1 text-xs text-gray-500 no-underline"
 		>
-			<i [class]="item.icone" class="text-xl"></i>
+			<i [class]="item.icone" class="text-xl" aria-hidden="true"></i>
 			{{ item.label }}
 		</a>
 	</nav>
