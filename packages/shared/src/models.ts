@@ -1,0 +1,36 @@
+import type { Tables, TablesInsert, TablesUpdate } from './database.types';
+
+/**
+ * Aliases de domínio sobre os tipos gerados pelo Supabase.
+ * Adicione aqui um alias por tabela para usar no front e nas edge functions.
+ */
+/** Identidade visual da instância (linha única, id = 1). */
+export type DesignSettings = Tables<'design_settings'>;
+export type DesignSettingsUpdate = TablesUpdate<'design_settings'>;
+
+/** Cliente da mecânica (`document` = CPF/CNPJ só dígitos). */
+export type Cliente = Tables<'clients'>;
+export type ClienteInsert = TablesInsert<'clients'>;
+export type ClienteUpdate = TablesUpdate<'clients'>;
+
+/** Moto de um cliente (`plate` maiúscula, sem hífen). */
+export type Moto = Tables<'motorcycles'>;
+export type MotoInsert = TablesInsert<'motorcycles'>;
+export type MotoUpdate = TablesUpdate<'motorcycles'>;
+
+/** Serviço do catálogo (só nome; o preço é definido em cada OS). */
+export type Servico = Tables<'services'>;
+export type ServicoInsert = TablesInsert<'services'>;
+export type ServicoUpdate = TablesUpdate<'services'>;
+
+/** Ordem de serviço. Gravação via RPC `save_service_order`. */
+export type OrdemServico = Tables<'service_orders'>;
+export type ItemOrdemServico = Tables<'service_order_items'>;
+
+export type StatusOrdemServico = 'draft' | 'awaiting_approval' | 'approved' | 'rejected' | 'in_progress' | 'completed' | 'canceled';
+export type FormaPagamento = 'pix' | 'cash' | 'installments';
+
+/** Agendamento da agenda semanal (`start_time` vem como `HH:MM:SS`, data/hora locais). */
+export type Agendamento = Tables<'appointments'>;
+export type AgendamentoInsert = TablesInsert<'appointments'>;
+export type AgendamentoUpdate = TablesUpdate<'appointments'>;

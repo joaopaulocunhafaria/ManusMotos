@@ -1,0 +1,81 @@
+<div class="mx-auto flex w-full max-w-xl flex-col gap-4">
+	<div>
+		<h1 class="m-0 text-xl font-semibold">Serviços</h1>
+		<p class="mt-1 mb-0 text-sm text-gray-500">Catálogo usado nas ordens de serviço. O preço é definido em cada OS.</p>
+	</div>
+
+	<p-button label="Novo serviço" icon="pi pi-plus" styleClass="w-full min-h-11" (onClick)="abrirNovo()" />
+
+	<p-iconfield>
+		<p-inputicon styleClass="pi pi-search" />
+		<input
+			pInputText
+			type="search"
+			enterkeyhint="search"
+			placeholder="Buscar serviço"
+			aria-label="Buscar serviço"
+			class="min-h-11 w-full"
+			[value]="busca"
+			(input)="aoDigitarBusca($any($event.target).value)"
+		/>
+	</p-iconfield>
+
+	<app-estado
+		[modo]="estado()"
+		mensagemVazio="Nenhum serviço encontrado."
+		mensagemErro="Não foi possível carregar os serviços."
+		(recarregar)="carregar()"
+	></app-estado>
+
+	<ul *ngIf="estado() === 'carregado'" class="m-0 flex list-none flex-col gap-2 p-0">
+		<li *ngFor="let servico of servicos()">
+			<button
+				type="button"
+				class="flex min-h-14 w-full cursor-pointer items-center gap-3 rounded-lg border border-[var(--cor-borda)] bg-[var(--cor-superficie)] px-4 py-3 text-left text-base text-[var(--cor-texto)]"
+				(click)="abrirEdicao(servico)"
+			>
+				<i class="pi pi-wrench text-[var(--cor-primaria)]"></i>
+				<span class="min-w-0 flex-1 truncate" [class.text-gray-400]="!servico.active">{{ servico.name }}</span>
+				<p-tag *ngIf="!servico.active" value="Inativo" severity="secondary" />
+				<i class="pi pi-chevron-right text-gray-400"></i>
+			</button>
+		</li>
+	</ul>
+
+	<p-button
+		*ngIf="estado() === 'carregado' && servicos().length < total()"
+		label="Carregar mais"
+		variant="outlined"
+		styleClass="w-full min-h-11"
+		[loading]="carregandoMais()"
+		(onClick)="carregarMais()"
+	/>
+</div>
+
+<p-drawer
+	[visible]="drawerAberto()"
+	(visibleChange)="drawerAberto.set($event)"
+	position="bottom"
+	[header]="emEdicao() ? 'Editar serviço' : 'Novo serviço'"
+	styleClass="!h-auto rounded-t-2xl"
+>
+	<form [formGroup]="formulario" (ngSubmit)="salvar()" class="area-segura-base flex flex-col gap-4">
+		<div class="flex flex-col gap-1">
+			<label for="nome-servico" class="text-sm font-medium">Nome do serviço *</label>
+			<input pInputText id="nome-servico" formControlName="name" maxlength="100" autocomplete="off" class="w-full" />
+			<small *ngIf="invalido('name')" class="text-red-600">Informe o nome (até 100 caracteres).</small>
+		</div>
+
+		<p-button type="submit" label="Salvar" icon="pi pi-check" styleClass="w-full min-h-11" [loading]="salvando()" />
+		<p-button
+			*ngIf="emEdicao() as servico"
+			[label]="servico.active ? 'Desativar serviço' : 'Ativar serviço'"
+			[icon]="servico.active ? 'pi pi-eye-slash' : 'pi pi-eye'"
+			variant="text"
+			[severity]="servico.active ? 'danger' : 'secondary'"
+			styleClass="w-full min-h-11"
+			[disabled]="salvando()"
+			(onClick)="alternarAtivo()"
+		/>
+	</form>
+</p-drawer>

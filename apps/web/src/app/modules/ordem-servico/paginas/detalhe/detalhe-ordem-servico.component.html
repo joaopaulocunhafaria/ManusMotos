@@ -1,0 +1,194 @@
+<div class="mx-auto flex w-full max-w-xl flex-col gap-4">
+	<div class="flex items-center gap-2">
+		<p-button icon="pi pi-arrow-left" variant="text" styleClass="min-h-11 min-w-11" ariaLabel="Voltar" (onClick)="voltar()" />
+		<h1 class="m-0 min-w-0 flex-1 truncate text-xl font-semibold">OS #{{ ordem()?.number }}</h1>
+		<ng-container *ngIf="ordem()">
+			<p-button
+				icon="pi pi-ellipsis-v"
+				variant="text"
+				severity="secondary"
+				styleClass="min-h-11 min-w-11"
+				ariaLabel="Mais ações"
+				(onClick)="menu.toggle($event)"
+			/>
+			<p-menu #menu [model]="itensMenu()" [popup]="true" appendTo="body" />
+		</ng-container>
+	</div>
+
+	<app-estado [modo]="estado()" mensagemErro="Não foi possível carregar a ordem de serviço." (recarregar)="carregar()"></app-estado>
+
+	<ng-container *ngIf="estado() === 'carregado' && ordem() as ordem">
+		<div class="flex flex-wrap items-center justify-between gap-2">
+			<p-tag [value]="labelStatus[status()]" [severity]="severidadeStatus[status()]" />
+			<span class="text-sm text-gray-500">{{ ordem.order_date | date: 'dd/MM/yyyy' }}</span>
+		</div>
+
+		<!-- Ações principais -->
+		<div class="flex flex-col gap-2">
+			<p-button label="Versão do cliente" icon="pi pi-share-alt" styleClass="w-full min-h-11" (onClick)="abrirVersaoCliente()" />
+			<p-button
+				*ngFor="let transicao of transicoes()"
+				[label]="transicao.label"
+				[icon]="transicao.icone"
+				variant="outlined"
+				styleClass="w-full min-h-11"
+				[loading]="alterandoStatus()"
+				(onClick)="aoEscolherTransicao(transicao)"
+			/>
+		</div>
+
+		<p-card header="Cliente">
+			<dl class="m-0 flex flex-col gap-2 text-sm">
+				<div>
+					<dt class="text-gray-500">Nome</dt>
+					<dd class="m-0 text-base font-medium">{{ ordem.clients.name }}</dd>
+				</div>
+				<div>
+					<dt class="text-gray-500">Telefone</dt>
+					<dd class="m-0 flex flex-wrap items-center gap-x-4">
+						<a [href]="'tel:' + ordem.clients.phone" class="inline-flex min-h-11 items-center text-base text-[var(--cor-primaria)]">
+							{{ ordem.clients.phone | telefone }}
+						</a>
+						<a
+							[href]="linkWhatsappCliente()"
+							target="_blank"
+							rel="noopener"
+							class="inline-flex min-h-11 items-center gap-1 text-base text-green-700"
+						>
+							<i class="pi pi-whatsapp"></i>
+							WhatsApp
+						</a>
+					</dd>
+				</div>
+				<div>
+					<dt class="text-gray-500">CPF / CNPJ</dt>
+					<dd class="m-0">{{ ordem.clients.document | documento }}</dd>
+				</div>
+				<div *ngIf="ordem.clients.address">
+					<dt class="text-gray-500">Endereço</dt>
+					<dd class="m-0">{{ ordem.clients.address }}</dd>
+				</div>
+			</dl>
+		</p-card>
+
+		<p-card header="Moto">
+			<dl class="m-0 grid grid-cols-2 gap-2 text-sm">
+				<div class="col-span-2">
+					<dt class="text-gray-500">Modelo</dt>
+					<dd class="m-0 text-base font-medium">{{ ordem.motorcycles.model }}</dd>
+				</div>
+				<div>
+					<dt class="text-gray-500">Cor</dt>
+					<dd class="m-0">{{ ordem.motorcycles.color }}</dd>
+				</div>
+				<div>
+					<dt class="text-gray-500">Placa</dt>
+					<dd class="m-0 font-mono">{{ ordem.motorcycles.plate | placa }}</dd>
+				</div>
+				<div>
+					<dt class="text-gray-500">KM</dt>
+					<dd class="m-0">{{ ordem.mileage !== null ? (ordem.mileage | number) + ' km' : '—' }}</dd>
+				</div>
+			</dl>
+		</p-card>
+
+		<p-card header="Serviços">
+			<ul class="m-0 flex list-none flex-col p-0 text-sm">
+				<li
+					*ngFor="let item of ordem.service_order_items"
+					class="flex items-baseline justify-between gap-3 border-0 border-b border-dashed border-[var(--cor-borda)] py-2"
+				>
+					<span class="min-w-0">{{ item.service_name }}</span>
+					<span class="shrink-0 font-medium whitespace-nowrap">{{ item.price | currency }}</span>
+				</li>
+			</ul>
+			<div class="flex items-baseline justify-between pt-3">
+				<span class="font-medium">Total</span>
+				<span class="text-xl font-bold">{{ ordem.total | currency }}</span>
+			</div>
+		</p-card>
+
+		<p-card header="Pagamento e prazo">
+			<dl class="m-0 flex flex-col gap-2 text-sm">
+				<div class="flex justify-between gap-3">
+					<dt class="text-gray-500">Forma</dt>
+					<dd class="m-0 font-medium">{{ formaPagamento() }}</dd>
+				</div>
+				<div class="flex justify-between gap-3">
+					<dt class="text-gray-500">Entrada</dt>
+					<dd class="m-0 font-medium">{{ ordem.down_payment | currency }}</dd>
+				</div>
+				<div class="flex justify-between gap-3">
+					<dt class="text-gray-500">Restante</dt>
+					<dd class="m-0 font-semibold">{{ saldo() | currency }}</dd>
+				</div>
+				<div *ngIf="ordem.payment_method === 'installments' && ordem.installments" class="flex justify-between gap-3">
+					<dt class="text-gray-500">Parcelas</dt>
+					<dd class="m-0 font-medium">{{ ordem.installments }}x de {{ parcela() | currency }}</dd>
+				</div>
+				<div class="flex justify-between gap-3">
+					<dt class="text-gray-500">Tempo estimado</dt>
+					<dd class="m-0 text-right font-medium">{{ ordem.estimated_time || '—' }}</dd>
+				</div>
+			</dl>
+		</p-card>
+
+		<p-card *ngIf="ordem.customer_notes || ordem.notes" header="Observações">
+			<div class="flex flex-col gap-3 text-sm">
+				<div *ngIf="ordem.customer_notes">
+					<span class="text-gray-500">Para o cliente</span>
+					<p class="m-0 whitespace-pre-line">{{ ordem.customer_notes }}</p>
+				</div>
+				<div *ngIf="ordem.notes" class="rounded-md bg-amber-50 p-3">
+					<span class="text-amber-800">
+						<i class="pi pi-lock text-xs"></i>
+						Interna
+					</span>
+					<p class="m-0 whitespace-pre-line">{{ ordem.notes }}</p>
+				</div>
+			</div>
+		</p-card>
+	</ng-container>
+</div>
+
+<!-- Versão do cliente -->
+<p-drawer
+	[visible]="versaoClienteAberta()"
+	(visibleChange)="versaoClienteAberta.set($event)"
+	(onShow)="prepararImagem()"
+	position="bottom"
+	header="Versão do cliente"
+	styleClass="!h-[90%] rounded-t-2xl"
+>
+	<div *ngIf="ordem() as ordem" class="area-segura-base flex flex-col gap-3">
+		<div #cartaoCliente class="mx-auto w-full max-w-sm">
+			<app-os-cliente [ordem]="ordem"></app-os-cliente>
+		</div>
+
+		<p-button
+			label="Compartilhar imagem"
+			icon="pi pi-image"
+			styleClass="w-full min-h-11"
+			[loading]="gerandoImagem()"
+			[disabled]="!imagem()"
+			(onClick)="compartilharImagem()"
+		/>
+		<p-button
+			label="Salvar PDF / imprimir"
+			icon="pi pi-file-pdf"
+			variant="outlined"
+			styleClass="w-full min-h-11"
+			(onClick)="salvarPdf()"
+		/>
+		<p-button
+			label="Abrir conversa no WhatsApp"
+			icon="pi pi-whatsapp"
+			variant="text"
+			styleClass="w-full min-h-11"
+			(onClick)="abrirWhatsapp()"
+		/>
+		<p class="m-0 text-center text-xs text-gray-500">Sem CPF/CNPJ, endereço, observação interna e status.</p>
+	</div>
+</p-drawer>
+
+<p-confirmDialog [style]="{ width: '100vw', maxWidth: '24rem' }" />

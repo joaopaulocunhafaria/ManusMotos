@@ -1,0 +1,4 @@
+/* Linha horizontal a cada hora (o tamanho vem de ALTURA_HORA_PX via [style.background-size]). */
+.linhas-hora {
+	background-image: linear-gradient(to bottom, var(--cor-borda) 1px, transparent 1px);
+}

@@ -1,0 +1,30 @@
+/* Seletor de cor nativo: remove o padding/borda padrão do Safari e mostra só a amostra */
+.seletor-cor {
+	-webkit-appearance: none;
+	appearance: none;
+	padding: 0;
+	border: 1px solid var(--cor-borda);
+	border-radius: 0.5rem;
+	background: none;
+
+	&::-webkit-color-swatch-wrapper {
+		padding: 0;
+	}
+
+	&::-webkit-color-swatch {
+		border: none;
+		border-radius: 0.5rem;
+	}
+}
+
+/* Arredondamento: 4 opções dividindo a largura, alvo de toque de 44px */
+:host ::ng-deep .seletor-raio {
+	display: flex;
+
+	.p-togglebutton {
+		flex: 1 1 0;
+		min-width: 0;
+		min-height: 2.75rem;
+		padding-inline: 0.25rem;
+	}
+}

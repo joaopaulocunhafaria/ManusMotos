@@ -1,0 +1,12 @@
+/* Botões do seletor de pagamento com alvo de toque de 44px e largura dividida. */
+:host ::ng-deep .forma-pagamento {
+	display: flex;
+	width: 100%;
+
+	.p-togglebutton {
+		flex: 1 1 0;
+		min-width: 0;
+		min-height: 2.75rem;
+		padding-inline: 0.25rem;
+	}
+}

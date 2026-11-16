@@ -1,0 +1,23 @@
+<div class="tela-cheia flex flex-col">
+	<header
+		class="area-segura-topo sticky top-0 z-10 flex min-h-14 items-center border-b border-[var(--cor-borda)] bg-[var(--cor-superficie)] px-4 py-2"
+	>
+		<span class="min-w-0 truncate text-lg font-bold text-[var(--cor-primaria)]">{{ temaService.config().shop_name }}</span>
+	</header>
+
+	<main class="flex-1 overflow-x-clip px-4 py-4">
+		<router-outlet></router-outlet>
+	</main>
+
+	<nav class="area-segura-base sticky bottom-0 z-10 flex border-t border-[var(--cor-borda)] bg-[var(--cor-superficie)]">
+		<a
+			*ngFor="let item of itensNavegacao"
+			[routerLink]="item.rota"
+			routerLinkActive="text-[var(--cor-primaria)]"
+			class="flex min-h-14 flex-1 flex-col items-center justify-center gap-1 text-xs text-gray-500 no-underline"
+		>
+			<i [class]="item.icone" class="text-xl"></i>
+			{{ item.label }}
+		</a>
+	</nav>
+</div>

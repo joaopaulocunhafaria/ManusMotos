@@ -1,0 +1,19 @@
+<div class="mx-auto flex w-full max-w-xl flex-col gap-4">
+	<p-card>
+		<h2 class="m-0 text-xl font-semibold">{{ temaService.config().shop_name }}</h2>
+		<p class="mt-2 mb-0 text-sm text-[var(--cor-secundaria)]">{{ temaService.config().subtitle || 'Bem-vindo!' }}</p>
+	</p-card>
+
+	<p-button label="Nova ordem de serviço" icon="pi pi-plus" styleClass="w-full min-h-11" routerLink="/administracao/ordem-servico/nova" />
+
+	<nav class="grid grid-cols-2 gap-2" aria-label="Atalhos">
+		<a
+			*ngFor="let atalho of atalhos"
+			[routerLink]="atalho.rota"
+			class="flex min-h-20 flex-col items-center justify-center gap-2 rounded-lg border border-[var(--cor-borda)] bg-[var(--cor-superficie)] p-3 text-center text-sm text-[var(--cor-texto)] no-underline"
+		>
+			<i [class]="atalho.icone" class="text-2xl text-[var(--cor-primaria)]"></i>
+			{{ atalho.label }}
+		</a>
+	</nav>
+</div>

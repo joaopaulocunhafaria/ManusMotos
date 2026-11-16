@@ -1,0 +1,111 @@
+<form [formGroup]="formulario" (ngSubmit)="salvar()" class="flex flex-col gap-4">
+	<section class="flex flex-col gap-4">
+		<div class="flex flex-col gap-1">
+			<label for="cliente-nome" class="text-sm font-medium">Nome *</label>
+			<input pInputText id="cliente-nome" formControlName="name" maxlength="120" autocomplete="name" class="w-full" />
+			<small *ngIf="invalido('name')" class="text-red-600">Informe o nome.</small>
+		</div>
+
+		<div class="flex flex-col gap-1">
+			<label for="cliente-telefone" class="text-sm font-medium">Telefone / WhatsApp *</label>
+			<input
+				pInputText
+				id="cliente-telefone"
+				type="tel"
+				inputmode="tel"
+				autocomplete="tel"
+				formControlName="phone"
+				maxlength="16"
+				placeholder="(00) 00000-0000"
+				class="w-full"
+				(blur)="formatar('phone')"
+			/>
+			<small *ngIf="invalido('phone')" class="text-red-600">Informe DDD + número (10 ou 11 dígitos).</small>
+		</div>
+
+		<div class="flex flex-col gap-1">
+			<label for="cliente-documento" class="text-sm font-medium">CPF / CNPJ *</label>
+			<input
+				pInputText
+				id="cliente-documento"
+				inputmode="numeric"
+				autocomplete="off"
+				formControlName="document"
+				maxlength="18"
+				placeholder="000.000.000-00"
+				class="w-full"
+				(blur)="formatar('document')"
+			/>
+			<small *ngIf="invalido('document')" class="text-red-600">CPF ou CNPJ inválido.</small>
+		</div>
+
+		<div class="flex flex-col gap-1">
+			<label for="cliente-endereco" class="text-sm font-medium">Endereço</label>
+			<input pInputText id="cliente-endereco" formControlName="address" maxlength="300" autocomplete="street-address" class="w-full" />
+		</div>
+	</section>
+
+	<section class="flex flex-col gap-3" formArrayName="motos">
+		<h3 class="m-0 text-base font-semibold">Motos</h3>
+
+		<div
+			*ngFor="let moto of motos.controls; let i = index"
+			[formGroupName]="i"
+			class="flex flex-col gap-3 rounded-lg border border-[var(--cor-borda)] p-3"
+		>
+			<div class="flex items-center justify-between gap-2">
+				<span class="text-sm font-medium text-gray-500">Moto {{ i + 1 }}</span>
+				<p-button
+					*ngIf="motos.length > 1"
+					icon="pi pi-trash"
+					severity="danger"
+					variant="text"
+					styleClass="min-h-11 min-w-11"
+					ariaLabel="Remover moto"
+					(onClick)="removerMoto(i)"
+				/>
+			</div>
+
+			<div class="flex flex-col gap-1">
+				<label [for]="'moto-modelo-' + i" class="text-sm font-medium">Modelo *</label>
+				<input
+					pInputText
+					[id]="'moto-modelo-' + i"
+					formControlName="model"
+					maxlength="80"
+					placeholder="Ex.: Honda CG 160"
+					class="w-full"
+				/>
+				<small *ngIf="motoInvalida(moto, 'model')" class="text-red-600">Informe o modelo.</small>
+			</div>
+
+			<div class="grid grid-cols-2 gap-3">
+				<div class="flex min-w-0 flex-col gap-1">
+					<label [for]="'moto-cor-' + i" class="text-sm font-medium">Cor *</label>
+					<input pInputText [id]="'moto-cor-' + i" formControlName="color" maxlength="40" class="w-full" />
+					<small *ngIf="motoInvalida(moto, 'color')" class="text-red-600">Informe a cor.</small>
+				</div>
+				<div class="flex min-w-0 flex-col gap-1">
+					<label [for]="'moto-placa-' + i" class="text-sm font-medium">Placa *</label>
+					<input
+						pInputText
+						[id]="'moto-placa-' + i"
+						formControlName="plate"
+						maxlength="8"
+						autocapitalize="characters"
+						autocomplete="off"
+						spellcheck="false"
+						placeholder="ABC1D23"
+						class="w-full uppercase"
+						(blur)="formatarPlacaDa(moto)"
+					/>
+					<small *ngIf="motoInvalida(moto, 'plate')" class="text-red-600">Placa inválida.</small>
+				</div>
+			</div>
+		</div>
+
+		<p-button label="Adicionar moto" icon="pi pi-plus" variant="outlined" styleClass="w-full min-h-11" (onClick)="adicionarMoto()" />
+	</section>
+
+	<p-button type="submit" [label]="rotuloSalvar" icon="pi pi-check" styleClass="w-full min-h-11" [loading]="salvando()" />
+</form>
