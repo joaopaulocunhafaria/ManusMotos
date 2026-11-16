@@ -91,3 +91,35 @@ npm run db:types:remote
 
 Depois preencha `apps/web/src/environments/environment.ts` com a URL e a publishable/anon key do projeto. **Nunca** use a
 `service_role`/secret key no front-end.
+
+## Deploy (Vercel)
+
+O deploy usa o `vercel.json` da raiz e **sempre aponta para o Supabase de produção** (`jirabjimylbuizgxxhcj`), inclusive nos preview
+deployments. O comando de build da Vercel é `npm run build:vercel`, que roda `scripts/verificar-ambiente-producao.mjs` antes do `ng build`:
+o deploy falha se `environment.ts` não for o de produção (URL base `https://jirabjimylbuizgxxhcj.supabase.co`, sem `/rest/v1`, e chave
+`sb_publishable_…`).
+
+1. **Banco de produção**: aplique as migrations (o `seed.sql` não vai para produção; a linha `design_settings id = 1` vem da migration):
+
+   ```bash
+   npx supabase login
+   npx supabase link --project-ref jirabjimylbuizgxxhcj
+   npm run db:push
+   ```
+
+2. **Vercel** → _Add New… → Project_ → importe o repositório do GitHub.
+   - **Root Directory**: a raiz do repo (não `apps/web`: o build precisa dos workspaces e do `@manus/shared`).
+   - Framework, install, build e output vêm do `vercel.json`; não sobrescreva no painel. Nenhuma variável de ambiente é necessária (a
+     publishable key é pública por design; a segurança vem do RLS).
+   - Node 22 é lido de `engines` no `package.json`.
+3. Cada push na `main` gera um deploy de produção; outras branches geram previews (também com o banco de produção).
+
+Pelo CLI: `npm i -g vercel && vercel` (preview) ou `vercel --prod`.
+
+| Arquivo                                    | Papel                                                                             |
+| ------------------------------------------ | --------------------------------------------------------------------------------- |
+| `vercel.json`                              | Build, pasta de saída (`apps/web/dist/web/browser`), fallback SPA, cache, headers |
+| `scripts/verificar-ambiente-producao.mjs`  | Barra o deploy se o environment não apontar para o Supabase de produção           |
+| `apps/web/src/environments/environment.ts` | URL e publishable key de produção                                                 |
+
+Para checar localmente: `npm run build:vercel`.
