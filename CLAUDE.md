@@ -70,7 +70,10 @@ npm run db:start          # Supabase local (Docker)
 npm start                 # http://localhost:4200
 npm run build             # produção  |  npm run build-homolog -w @manus/web
 npm test                  # Karma (watch)  |  npm run test:ci -w @manus/web (headless)
-npm run typecheck
+npm run e2e               # Playwright: ponta a ponta no iPhone 8 (WebKit) contra o Supabase local
+npm run db:test           # pgTAP: regras do banco (supabase/tests/database)
+npm run test:tudo         # typecheck + Karma + pgTAP + E2E (critério de aceite)
+npm run typecheck         # app + testes E2E
 npm run format            # Prettier (também roda no pre-commit via husky + lint-staged)
 npm run db:migration <nome> && npm run db:reset && npm run db:types
 ```
@@ -154,10 +157,64 @@ autenticação voltar, guards serão classes `@Injectable({ providedIn: 'root' }
 **Formatação**: Prettier com **tabs (largura 3)**, `printWidth` 140, aspas simples, trailing commas e `prettier-plugin-tailwindcss` (ordena
 classes). Pre-commit roda lint-staged. Não reformate arquivos fora do escopo da mudança.
 
-**Testes**: Karma + Jasmine (`*.spec.ts` ao lado do arquivo). Declare o componente em `declarations` no `TestBed`.
+**Testes unitários**: Karma + Jasmine (`*.spec.ts` ao lado do arquivo). Declare o componente em `declarations` no `TestBed`. Veja também a
+seção **Testes de ponta a ponta**, que é critério de aceite.
 
 **Ambientes**: `environment.ts` (produção), `environment.homolog.ts`, `environment.development.ts` (Supabase local), trocados por
 `fileReplacements` no `angular.json`.
+
+## ✅ Testes de ponta a ponta: critério de aceite
+
+**Toda funcionalidade só está pronta quando tem testes que validam, de ponta a ponta, tudo o que foi desenvolvido.** Sem esses testes (ou
+com algum falhando), a tarefa **não** está concluída. Isso vale para funcionalidade nova, mudança de comportamento e correção de bug.
+
+Cada funcionalidade precisa de testes para:
+
+1. **Rota padrão e navegação**: a URL da tela abre o que deve; redirecionamentos (`/`, rotas antigas, rota inexistente); link na barra
+   inferior; botão voltar; parâmetros de URL (válidos, inválidos, ausentes); ID inexistente mostra o estado de erro.
+2. **Caminho feliz completo**: o fluxo principal pela tela, do início ao fim, conferindo **o que foi gravado no banco** (não só a mensagem
+   de sucesso) e o que aparece depois (listagem, detalhe).
+3. **Casos de borda, um teste por caso**: pense em cada um antes de codar e escreva um teste para cada. No mínimo:
+   - campos obrigatórios vazios e **só com espaços**; tamanhos máximos; formatos inválidos (CPF/CNPJ, telefone, placa, datas);
+   - valores-limite (zero, negativo, igual ao limite, um acima do limite: ex. entrada = total é válida, entrada > total não);
+   - duplicidade (registros únicos) e mensagens claras para o usuário;
+   - exclusão de registro em uso (FK), confirmação de ações destrutivas e cancelamento da confirmação;
+   - transações: falha no meio **não** pode deixar dado gravado pela metade;
+   - busca: sem resultado, termos parciais, com máscara, maiúsculas/minúsculas, caracteres especiais (`%`, `_`), debounce;
+   - paginação ("carregar mais") e listas vazias;
+   - estados de carregando/vazio/erro;
+   - comportamento mobile: sem scroll horizontal em 375 px, alvos de toque ≥ 44 px, inputs ≥ 16 px;
+   - APIs do aparelho (compartilhar, imprimir, abrir WhatsApp): sucesso, cancelamento pelo usuário e falta de suporte.
+4. **Regras do banco** (pgTAP): constraints, RLS/grants do papel `anon`, funções/RPCs (sucesso e cada erro esperado, com o código e a
+   mensagem), cascatas e `on delete`.
+
+**Onde ficam**
+
+| Camada                               | Ferramenta                            | Pasta                                           | Comando                         |
+| ------------------------------------ | ------------------------------------- | ----------------------------------------------- | ------------------------------- |
+| Ponta a ponta (tela + API + banco)   | Playwright, projeto `iphone-8-webkit` | `apps/web/e2e/<dominio>.spec.ts`                | `npm run e2e`                   |
+| Regras do banco                      | pgTAP (`supabase test db`)            | `supabase/tests/database/NN_<dominio>.test.sql` | `npm run db:test`               |
+| Funções puras e componentes isolados | Karma + Jasmine                       | `*.spec.ts` ao lado do arquivo                  | `npm run test:ci -w @manus/web` |
+
+**Como escrever os E2E** (`apps/web/e2e/`)
+
+- Importe `test`/`expect` de `./apoio/fixtures` (não de `@playwright/test`): a fixture `banco` cria dados e **apaga tudo ao final** do
+  teste, e a fixture automática falha o teste se a página lançar erro JS.
+- Cada teste cria **os próprios dados** com nomes/CPFs/placas únicos (`apoio/geradores.ts`: `unico()`, `gerarCpf()`, `gerarPlaca()`,
+  `segundaFeiraIsolada()`…). Nunca dependa do `seed.sql` nem da ordem dos testes: eles rodam em paralelo.
+- Registro criado **pela tela** também precisa ser registrado para limpeza (`banco.registrar(...)` ou os buscadores `clientePorDocumento`,
+  `servicoPorNome`, `agendamentosDoDia`, que já registram).
+- Selecione como o usuário enxerga: `getByRole`/`getByLabel`/`getByText` e os `id` dos campos. Botões do PrimeNG incluem o glifo do ícone no
+  nome acessível: use regex ancorada (`/^\W*Novo agendamento$/`) quando houver nomes parecidos.
+- APIs do sistema (compartilhar, imprimir, `window.open`) são simuladas com `page.addInitScript` (veja `ordem-servico.spec.ts`).
+- Antes de rodar: `npm run db:start` (e `npm run db:reset` se o schema mudou). O Playwright sobe o `ng serve` na porta 4310 sozinho.
+- Relatório e trace das falhas: `npm run e2e:relatorio -w @manus/web` (pastas `e2e-relatorio/` e `e2e-resultados/`, ignoradas no git).
+
+**Como escrever os testes do banco** (`supabase/tests/database/`):
+`begin; create extension if not exists pgtap with schema extensions; select plan(N); … select * from finish(); rollback;`. Rode as asserções
+como o app roda (`set local role anon;`). Use `throws_ok` com o código do erro (`23514` check, `23505` único, `23503` FK, `42501` permissão,
+`22023`/`P0002` erros das funções). O arquivo `00_seguranca.test.sql` garante, para qualquer tabela/função nova, RLS habilitado, policy
+explícita e `search_path` fixo.
 
 ## Backend (Supabase)
 
@@ -178,7 +235,9 @@ classes). Pre-commit roda lint-staged. Não reformate arquivos fora do escopo da
 
 ## Checklist antes de concluir uma tarefa
 
-1. `npm run typecheck`, `npm run build` e `npm run test:ci -w @manus/web` passando.
-2. Tela conferida em **375 × 667**: sem scroll horizontal, alvos de toque ≥ 44 px, inputs ≥ 16 px.
-3. Nova tabela? Migration com RLS + `npm run db:types`.
-4. `npm run format`.
+1. **Testes de ponta a ponta escritos para tudo o que foi desenvolvido** (rota padrão, caminho feliz e um teste por caso de borda, veja a
+   seção acima) e **`npm run test:tudo` passando** (typecheck + Karma + pgTAP + E2E). É critério de aceite: sem isso, não está pronto.
+2. `npm run build` passando.
+3. Tela conferida em **375 × 667**: sem scroll horizontal, alvos de toque ≥ 44 px, inputs ≥ 16 px (os E2E também checam).
+4. Nova tabela/função? Migration com RLS + grants mínimos, testes pgTAP e `npm run db:types`.
+5. `npm run format`.

@@ -15,6 +15,8 @@
 		"build": "npm run build -w @manus/web",
 		"test": "npm run test --workspaces --if-present",
 		"typecheck": "npm run typecheck --workspaces --if-present",
+		"e2e": "npm run e2e -w @manus/web",
+		"test:tudo": "npm run typecheck && npm run test:ci -w @manus/web && npm run db:test && npm run e2e",
 		"format": "prettier --write .",
 		"format:check": "prettier --check .",
 		"db:start": "supabase start",
@@ -26,6 +28,7 @@
 		"db:push": "supabase db push",
 		"db:types": "supabase gen types typescript --local > packages/shared/src/database.types.ts && prettier --write packages/shared/src/database.types.ts",
 		"db:types:remote": "supabase gen types typescript --linked > packages/shared/src/database.types.ts && prettier --write packages/shared/src/database.types.ts",
+		"db:test": "supabase test db",
 		"functions:serve": "supabase functions serve",
 		"functions:deploy": "supabase functions deploy",
 		"prepare": "husky"
