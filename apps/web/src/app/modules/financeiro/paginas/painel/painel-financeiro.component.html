@@ -1,0 +1,280 @@
+<div class="mx-auto flex w-full max-w-xl flex-col gap-4">
+	<div>
+		<h1 class="m-0 text-xl font-semibold">Financeiro</h1>
+		<p class="mt-1 mb-0 text-sm text-gray-500">Balanço de OS concluídas, vendas e compras de peças e lançamentos do caixa.</p>
+	</div>
+
+	<!-- Período -->
+	<section aria-label="Período" class="flex flex-col gap-2">
+		<div role="group" aria-label="Tipo de período" class="flex gap-1 rounded-lg border border-[var(--cor-borda)] p-1">
+			<button
+				*ngFor="let tipo of tipos"
+				type="button"
+				class="min-h-11 min-w-0 flex-1 cursor-pointer rounded-md border-0 px-1 text-sm"
+				[ngClass]="
+					periodo().tipo === tipo ? 'bg-[var(--cor-primaria)] font-semibold text-white' : 'bg-transparent text-[var(--cor-texto)]'
+				"
+				[attr.aria-pressed]="periodo().tipo === tipo"
+				(click)="escolherTipo(tipo)"
+			>
+				{{ labelTipo[tipo] }}
+			</button>
+		</div>
+
+		<div class="flex items-center gap-1">
+			<p-button
+				icon="pi pi-chevron-left"
+				variant="text"
+				styleClass="min-h-11 min-w-11"
+				ariaLabel="Período anterior"
+				(onClick)="deslocar(-1)"
+			/>
+			<span id="periodo-rotulo" class="min-w-0 flex-1 text-center font-medium" aria-live="polite">{{ rotulo() }}</span>
+			<p-button
+				icon="pi pi-chevron-right"
+				variant="text"
+				styleClass="min-h-11 min-w-11"
+				ariaLabel="Próximo período"
+				(onClick)="deslocar(1)"
+			/>
+		</div>
+
+		<div *ngIf="periodo().tipo === 'personalizado'" class="flex flex-col gap-2">
+			<div class="grid grid-cols-2 gap-2">
+				<div class="flex min-w-0 flex-col gap-1">
+					<label for="periodo-de" class="text-sm font-medium">De</label>
+					<input
+						pInputText
+						id="periodo-de"
+						name="de"
+						type="date"
+						class="min-h-11 w-full min-w-0"
+						[value]="personalizadoDe"
+						(input)="personalizadoDe = $any($event.target).value"
+					/>
+				</div>
+				<div class="flex min-w-0 flex-col gap-1">
+					<label for="periodo-ate" class="text-sm font-medium">Até</label>
+					<input
+						pInputText
+						id="periodo-ate"
+						name="ate"
+						type="date"
+						class="min-h-11 w-full min-w-0"
+						[value]="personalizadoAte"
+						(input)="personalizadoAte = $any($event.target).value"
+					/>
+				</div>
+			</div>
+			<small *ngIf="erroPersonalizado()" class="text-red-600">{{ erroPersonalizado() }}</small>
+			<p-button label="Aplicar período" variant="outlined" styleClass="w-full min-h-11" (onClick)="aplicarPersonalizado()" />
+		</div>
+	</section>
+
+	<app-estado [modo]="estado()" mensagemErro="Não foi possível carregar o balanço." (recarregar)="carregar()"></app-estado>
+
+	<ng-container *ngIf="estado() === 'carregado' && resumo() as resumo">
+		<!-- Caixa -->
+		<section
+			id="card-caixa"
+			aria-labelledby="caixa-titulo"
+			class="flex flex-col gap-2 rounded-lg bg-[var(--cor-primaria)] px-4 py-4 text-white"
+		>
+			<h2 id="caixa-titulo" class="m-0 text-sm font-medium opacity-90">Caixa hoje</h2>
+			<p class="valor m-0 text-3xl font-bold">{{ resumo.cash_now | currency }}</p>
+			<p class="m-0 text-sm opacity-90">
+				Início em {{ formatarData(resumo.opening_date) }}:
+				<span class="whitespace-nowrap">{{ resumo.opening_balance | currency }}</span>
+			</p>
+			<p-button
+				label="Configurar caixa"
+				icon="pi pi-cog"
+				severity="secondary"
+				styleClass="w-full min-h-11"
+				(onClick)="abrirConfiguracaoCaixa()"
+			/>
+		</section>
+
+		<!-- Totais do período -->
+		<section aria-label="Totais do período" class="grid grid-cols-2 gap-2">
+			<div
+				data-card="saldo"
+				class="col-span-2 rounded-lg border px-4 py-3"
+				[ngClass]="resumo.period_net < 0 ? 'border-red-300 bg-red-50' : 'saldo-positivo'"
+			>
+				<p class="m-0 text-sm text-gray-600">Saldo do período</p>
+				<p class="valor m-0 text-2xl font-bold" [ngClass]="resumo.period_net < 0 ? 'text-red-700' : 'text-green-700'">
+					{{ resumo.period_net | currency }}
+				</p>
+				<p class="m-0 text-xs text-gray-600">
+					Entradas
+					<span class="whitespace-nowrap">{{ resumo.period_in | currency }}</span>
+					· Saídas
+					<span class="whitespace-nowrap">{{ resumo.period_out | currency }}</span>
+				</p>
+			</div>
+
+			<div data-card="os" class="cartao-valor">
+				<p class="m-0 flex items-center gap-1 text-sm text-gray-600">
+					<i class="pi pi-file-edit" aria-hidden="true"></i>
+					OS executadas
+				</p>
+				<p class="valor m-0 text-lg font-semibold">{{ resumo.os_total | currency }}</p>
+				<p class="detalhe m-0 text-xs text-gray-500">{{ resumo.os_count }} {{ resumo.os_count === 1 ? 'ordem' : 'ordens' }}</p>
+			</div>
+
+			<div data-card="vendas" class="cartao-valor">
+				<p class="m-0 flex items-center gap-1 text-sm text-gray-600">
+					<i class="pi pi-shopping-cart" aria-hidden="true"></i>
+					Peças vendidas
+				</p>
+				<p class="valor m-0 text-lg font-semibold">{{ resumo.sales_total | currency }}</p>
+				<p class="detalhe m-0 text-xs text-gray-500">
+					{{ resumo.sales_units }} {{ resumo.sales_units === 1 ? 'unidade' : 'unidades' }}
+				</p>
+			</div>
+
+			<div data-card="lucro-pecas" class="cartao-valor">
+				<p class="m-0 flex items-center gap-1 text-sm text-gray-600">
+					<i class="pi pi-chart-line" aria-hidden="true"></i>
+					Lucro em peças
+				</p>
+				<p class="valor m-0 text-lg font-semibold" [class.text-red-700]="resumo.sales_profit < 0">
+					{{ resumo.sales_profit | currency }}
+				</p>
+				<p class="detalhe m-0 text-xs text-gray-500">Custo {{ resumo.sales_cost | currency }}</p>
+			</div>
+
+			<div data-card="compras" class="cartao-valor">
+				<p class="m-0 flex items-center gap-1 text-sm text-gray-600">
+					<i class="pi pi-box" aria-hidden="true"></i>
+					Compras de estoque
+				</p>
+				<p class="valor m-0 text-lg font-semibold">{{ resumo.purchases_total | currency }}</p>
+				<p class="detalhe m-0 text-xs text-gray-500">
+					{{ resumo.purchases_units }} {{ resumo.purchases_units === 1 ? 'unidade' : 'unidades' }}
+				</p>
+			</div>
+
+			<div data-card="entradas" class="cartao-valor">
+				<p class="m-0 flex items-center gap-1 text-sm text-gray-600">
+					<i class="pi pi-arrow-down-left" aria-hidden="true"></i>
+					Outras entradas
+				</p>
+				<p class="valor m-0 text-lg font-semibold">{{ resumo.income_total | currency }}</p>
+			</div>
+
+			<div data-card="saidas" class="cartao-valor">
+				<p class="m-0 flex items-center gap-1 text-sm text-gray-600">
+					<i class="pi pi-arrow-up-right" aria-hidden="true"></i>
+					Outras saídas
+				</p>
+				<p class="valor m-0 text-lg font-semibold">{{ resumo.expense_total | currency }}</p>
+			</div>
+
+			<div data-card="caixa-inicio" class="cartao-valor">
+				<p class="m-0 text-sm text-gray-600">Caixa no início</p>
+				<p class="valor m-0 text-lg font-semibold">{{ resumo.cash_start | currency }}</p>
+			</div>
+
+			<div data-card="caixa-fim" class="cartao-valor">
+				<p class="m-0 text-sm text-gray-600">Caixa no fim</p>
+				<p class="valor m-0 text-lg font-semibold">{{ resumo.cash_end | currency }}</p>
+			</div>
+		</section>
+	</ng-container>
+
+	<div class="grid grid-cols-2 gap-2">
+		<p-button
+			label="Nova entrada"
+			icon="pi pi-plus"
+			variant="outlined"
+			styleClass="w-full min-h-11"
+			(onClick)="novoLancamento('income')"
+		/>
+		<p-button
+			label="Nova saída"
+			icon="pi pi-minus"
+			variant="outlined"
+			severity="danger"
+			styleClass="w-full min-h-11"
+			(onClick)="novoLancamento('expense')"
+		/>
+	</div>
+
+	<!-- Extrato -->
+	<section aria-labelledby="extrato-titulo" class="flex flex-col gap-2">
+		<h2 id="extrato-titulo" class="m-0 text-base font-semibold">Extrato</h2>
+		<app-estado
+			[modo]="estadoExtrato()"
+			mensagemVazio="Nenhuma movimentação no período."
+			mensagemErro="Não foi possível carregar o extrato."
+			(recarregar)="carregarExtrato()"
+		></app-estado>
+
+		<ul *ngIf="estadoExtrato() === 'carregado'" class="m-0 flex list-none flex-col gap-2 p-0">
+			<li *ngFor="let item of extrato()" class="item-extrato" [attr.data-origem]="item.source" [attr.data-ref]="item.ref_id">
+				<!-- Sem rota (ex.: peça excluída) o link fica sem href. -->
+				<a [routerLink]="rotaItem(item)" class="linha-extrato text-[var(--cor-texto)] no-underline">
+					<i [class]="iconeOrigem[item.source]" class="mt-1 text-[var(--cor-primaria)]" aria-hidden="true"></i>
+					<span class="flex min-w-0 flex-1 flex-col">
+						<span class="truncate font-medium">{{ item.description }}</span>
+						<span class="text-sm text-gray-500">{{ labelOrigem[item.source] }} · {{ formatarData(item.entry_date) }}</span>
+					</span>
+					<span class="valor shrink-0 font-semibold whitespace-nowrap" [ngClass]="item.amount < 0 ? 'text-red-700' : 'text-green-700'">
+						{{ item.amount < 0 ? '−' : '+' }} {{ (item.amount < 0 ? -item.amount : item.amount) | currency }}
+					</span>
+				</a>
+			</li>
+		</ul>
+
+		<p-button
+			*ngIf="estadoExtrato() === 'carregado' && extrato().length < totalExtrato()"
+			label="Carregar mais"
+			variant="outlined"
+			styleClass="w-full min-h-11"
+			[loading]="carregandoMais()"
+			(onClick)="carregarMais()"
+		/>
+	</section>
+</div>
+
+<p-drawer
+	[visible]="configurandoCaixa()"
+	(visibleChange)="configurandoCaixa.set($event)"
+	position="bottom"
+	header="Configurar caixa"
+	styleClass="!h-auto max-h-[90dvh] rounded-t-2xl"
+>
+	<form [formGroup]="formularioCaixa" (ngSubmit)="salvarCaixa()" class="flex flex-col gap-4" novalidate>
+		<p class="m-0 text-sm text-gray-600">O caixa começa com este valor na data inicial e soma as entradas e saídas a partir dela.</p>
+		<div class="flex flex-col gap-1">
+			<label for="caixa-valor" class="text-sm font-medium">Valor inicial *</label>
+			<p-inputNumber
+				formControlName="opening_balance"
+				inputId="caixa-valor"
+				mode="currency"
+				currency="BRL"
+				locale="pt-BR"
+				[min]="-caixaLimite"
+				[max]="caixaLimite"
+				[fluid]="true"
+				inputStyleClass="min-h-11"
+			/>
+			<small *ngIf="caixaInvalido('opening_balance')" class="text-red-600">Informe o valor inicial do caixa.</small>
+		</div>
+		<div class="flex flex-col gap-1">
+			<label for="caixa-data" class="text-sm font-medium">Data inicial *</label>
+			<input pInputText id="caixa-data" type="date" formControlName="opening_date" class="min-h-11 w-full min-w-0" />
+			<small *ngIf="caixaInvalido('opening_date')" class="text-red-600">Informe a data inicial do caixa.</small>
+		</div>
+		<p-button type="submit" label="Salvar caixa" icon="pi pi-check" styleClass="w-full min-h-11" [loading]="salvandoCaixa()" />
+		<p-button
+			label="Cancelar"
+			variant="text"
+			styleClass="w-full min-h-11"
+			[disabled]="salvandoCaixa()"
+			(onClick)="configurandoCaixa.set(false)"
+		/>
+	</form>
+</p-drawer>

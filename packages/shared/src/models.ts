@@ -39,3 +39,15 @@ export type AgendamentoUpdate = TablesUpdate<'appointments'>;
 export type Peca = Tables<'parts'>;
 export type PecaInsert = TablesInsert<'parts'>;
 export type PecaUpdate = TablesUpdate<'parts'>;
+
+/** Movimentação de estoque: `purchase` (sai do caixa), `sale` (entra no caixa), `adjustment` (sem efeito no caixa). */
+export type MovimentoPeca = Tables<'part_movements'>;
+export type TipoMovimentoPeca = 'purchase' | 'sale' | 'adjustment';
+
+/** Início do caixa (linha única, id = 1). */
+export type ConfiguracaoCaixa = Tables<'cash_settings'>;
+
+/** Lançamento manual do caixa (`income` = entrada, `expense` = saída). */
+export type LancamentoCaixa = Tables<'cash_entries'>;
+export type LancamentoCaixaInsert = TablesInsert<'cash_entries'>;
+export type TipoLancamentoCaixa = 'income' | 'expense';

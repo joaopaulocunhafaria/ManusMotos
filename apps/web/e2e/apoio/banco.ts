@@ -1,5 +1,18 @@
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
-import type { Agendamento, Cliente, Database, Moto, OrdemServico, Peca, PecaInsert, Servico } from '@manus/shared';
+import type {
+	Agendamento,
+	Cliente,
+	ConfiguracaoCaixa,
+	Database,
+	LancamentoCaixa,
+	LancamentoCaixaInsert,
+	Moto,
+	MovimentoPeca,
+	OrdemServico,
+	Peca,
+	PecaInsert,
+	Servico,
+} from '@manus/shared';
 import { environment } from '../../src/environments/environment.development';
 import { gerarCpf, gerarPlaca, gerarTelefone, unico } from './geradores';
 
@@ -27,7 +40,12 @@ export class Banco {
 		servicos: new Set<string>(),
 		agendamentos: new Set<string>(),
 		pecas: new Set<string>(),
+		lancamentos: new Set<string>(),
 	};
+
+	/** Caixa antes do teste, restaurado em `limpar()` quando o teste o alterou. */
+	private caixaOriginal: ConfiguracaoCaixa | null = null;
+	private nomesPecasExcluidas = new Set<string>();
 
 	/** Registra para limpeza registros criados pela própria tela. */
 	public registrar(tipo: keyof Banco['ids'], id: string): void {
@@ -146,9 +164,96 @@ export class Banco {
 		return data;
 	}
 
+	/** Movimentações da peça (compras, vendas, ajustes), da mais antiga para a mais recente. */
+	public async movimentosDaPeca(pecaId: string): Promise<MovimentoPeca[]> {
+		const { data, error } = await this.client.from('part_movements').select('*').eq('part_id', pecaId).order('created_at');
+		if (error) throw error;
+		return data;
+	}
+
+	/** Exclui a peça e marca o nome para apagar no fim as movimentações que ficam órfãs (part_id nulo). */
+	public async excluirPecaComHistorico(peca: Peca): Promise<void> {
+		this.nomesPecasExcluidas.add(peca.name);
+		const { error } = await this.client.from('parts').delete().eq('id', peca.id);
+		if (error) throw error;
+	}
+
+	/** Vende pela RPC (como outro aparelho faria). */
+	public async venderPeca(pecaId: string, quantidade: number, preco: number, data: string): Promise<MovimentoPeca> {
+		const { data: venda, error } = await this.client.rpc('sell_part', {
+			p_part_id: pecaId,
+			p_quantity: quantidade,
+			p_unit_price: preco,
+			p_date: data,
+		});
+		if (error) throw error;
+		return venda as MovimentoPeca;
+	}
+
+	/** Conclui a OS e fixa a data de conclusão (meio-dia no fuso da oficina). completed_at só é gravável pela service_role. */
+	public async concluirOrdemEm(id: string, data: string): Promise<void> {
+		const { error } = await this.client.from('service_orders').update({ status: 'completed' }).eq('id', id);
+		if (error) throw error;
+		const { error: erroData } = await this.admin
+			.from('service_orders')
+			.update({ completed_at: `${data}T12:00:00-03:00` })
+			.eq('id', id);
+		if (erroData) throw erroData;
+	}
+
+	public async criarLancamento(dados: Partial<LancamentoCaixaInsert> & { entry_date: string }): Promise<LancamentoCaixa> {
+		const { data, error } = await this.client
+			.from('cash_entries')
+			.insert({ kind: 'expense', description: `Lançamento E2E ${unico()}`, amount: 10, ...dados })
+			.select()
+			.single();
+		if (error) throw error;
+		this.registrar('lancamentos', data.id);
+		return data;
+	}
+
+	public async lancamento(id: string): Promise<LancamentoCaixa | null> {
+		const { data, error } = await this.client.from('cash_entries').select('*').eq('id', id).maybeSingle();
+		if (error) throw error;
+		return data;
+	}
+
+	/** Lançamentos com a descrição exata (registra para limpeza os criados pela tela). */
+	public async lancamentosPorDescricao(descricao: string): Promise<LancamentoCaixa[]> {
+		const { data, error } = await this.client.from('cash_entries').select('*').eq('description', descricao);
+		if (error) throw error;
+		data.forEach((linha) => this.registrar('lancamentos', linha.id));
+		return data;
+	}
+
+	public async caixa(): Promise<ConfiguracaoCaixa> {
+		const { data, error } = await this.client.from('cash_settings').select('*').eq('id', 1).single();
+		if (error) throw error;
+		return data;
+	}
+
+	/** Define o início do caixa (o valor anterior volta no fim do teste). */
+	public async definirCaixa(valor: number, data: string): Promise<void> {
+		this.caixaOriginal ??= await this.caixa();
+		const { error } = await this.client.from('cash_settings').update({ opening_balance: valor, opening_date: data }).eq('id', 1);
+		if (error) throw error;
+	}
+
+	/** Guarda o caixa atual para restaurar no fim (use antes de alterá-lo pela tela). */
+	public async guardarCaixa(): Promise<void> {
+		this.caixaOriginal ??= await this.caixa();
+	}
+
 	/** Remove tudo que o teste criou (OS antes de clientes/serviços, por causa das FKs). */
 	public async limpar(): Promise<void> {
-		const apagar = async (tabela: 'service_orders' | 'clients' | 'services' | 'appointments' | 'parts', ids: Set<string>) => {
+		if (this.caixaOriginal) {
+			const { opening_balance, opening_date } = this.caixaOriginal;
+			await this.admin.from('cash_settings').update({ opening_balance, opening_date }).eq('id', 1);
+		}
+		const apagar = async (
+			tabela: 'service_orders' | 'clients' | 'services' | 'appointments' | 'parts' | 'cash_entries',
+			ids: Set<string>,
+		) => {
 			if (ids.size)
 				await this.admin
 					.from(tabela)
@@ -156,6 +261,19 @@ export class Banco {
 					.in('id', [...ids]);
 		};
 		await apagar('appointments', this.ids.agendamentos);
+		await apagar('cash_entries', this.ids.lancamentos);
+		// Movimentações ficam com part_id nulo quando a peça é apagada: remove antes para não sobrar histórico de teste.
+		if (this.ids.pecas.size)
+			await this.admin
+				.from('part_movements')
+				.delete()
+				.in('part_id', [...this.ids.pecas]);
+		if (this.nomesPecasExcluidas.size)
+			await this.admin
+				.from('part_movements')
+				.delete()
+				.is('part_id', null)
+				.in('part_name', [...this.nomesPecasExcluidas]);
 		await apagar('parts', this.ids.pecas);
 		// OS criadas pela tela para os clientes do teste.
 		if (this.ids.clientes.size) {

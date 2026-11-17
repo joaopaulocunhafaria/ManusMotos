@@ -52,6 +52,7 @@ test.describe('Navegação e rotas', () => {
 			['Ordens de serviço', /\/administracao\/ordem-servico$/, 'Ordens de serviço'],
 			['Estoque', /\/administracao\/estoque$/, 'Estoque'],
 			['Clientes', /\/administracao\/clientes$/, 'Clientes'],
+			['Financeiro', /\/administracao\/financeiro$/, 'Financeiro'],
 			['Serviços', /\/administracao\/servicos$/, 'Serviços'],
 			['Aparência', /\/administracao\/configuracoes/, 'Identidade visual'],
 			['Agenda', /\/administracao\/agenda$/, 'Agenda'],
@@ -76,7 +77,15 @@ test.describe('Navegação e rotas', () => {
 		await page.getByRole('navigation', { name: 'Navegação principal' }).getByRole('button', { name: 'Menu', exact: true }).click();
 		const menu = page.getByRole('navigation', { name: 'Menu lateral' });
 		await expect(menu).toBeVisible();
-		await expect(menu.getByRole('link')).toHaveText(['Agenda', 'Ordens de serviço', 'Estoque', 'Clientes', 'Serviços', 'Aparência']);
+		await expect(menu.getByRole('link')).toHaveText([
+			'Agenda',
+			'Ordens de serviço',
+			'Estoque',
+			'Clientes',
+			'Financeiro',
+			'Serviços',
+			'Aparência',
+		]);
 		await expect(menu.getByRole('link', { name: 'Clientes', exact: true })).toHaveAttribute('aria-current', 'page');
 	});
 
@@ -125,6 +134,8 @@ test.describe('Navegação e rotas', () => {
 		'/administracao/clientes/novo',
 		'/administracao/estoque',
 		'/administracao/estoque/nova',
+		'/administracao/financeiro',
+		'/administracao/financeiro/lancamentos/novo',
 	]) {
 		test(`${rota} cabe em 375 px sem scroll horizontal`, async ({ page }) => {
 			await page.goto(rota);

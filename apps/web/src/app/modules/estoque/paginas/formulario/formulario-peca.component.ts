@@ -1,20 +1,21 @@
-import { Component, OnInit, signal } from '@angular/core';
+import { Component, OnInit, signal, ViewChild } from '@angular/core';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
-import type { Peca } from '@manus/shared';
+import type { MovimentoPeca, Peca } from '@manus/shared';
 import { ConfirmationService, MessageService } from 'primeng/api';
+import { VALOR_MAXIMO } from '../../../../utils/_constantes/valores';
 import { campoInvalido, textoOuNulo } from '../../../../utils/_formularios/campos';
 import { anosMoto } from '../../../../utils/_formularios/validadores';
+import { deDataIso, hojeIso } from '../../../../utils/_metodos/datas';
 import { mensagemErro } from '../../../../utils/_metodos/supabase';
 import { EstadoTela } from '../../../../utils/_models/estado-tela';
 import { calcularLucro, calcularMargem } from '../../_metodos/margem';
-import { PecaFormulario } from '../../_modelos/peca.model';
+import { HistoricoPecaComponent } from '../../_componentes/historico-peca/historico-peca.component';
+import { PecaEdicao, PecaFormulario } from '../../_modelos/peca.model';
 import { EstoqueService } from '../../_servicos/estoque.service';
 
 const ANO_MINIMO = 1950;
 const ANO_MAXIMO = 2100;
-/** Maior valor em `numeric(10, 2)`. */
-export const VALOR_MAXIMO = 99_999_999.99;
 
 /** Página `/administracao/estoque/nova` e `/administracao/estoque/:id`. */
 @Component({
@@ -27,7 +28,10 @@ export class FormularioPecaComponent implements OnInit {
 	public peca = signal<Peca | null>(null);
 	public estado = signal<EstadoTela>('carregando');
 	public salvando = signal(false);
+	public vendendo = signal(false);
 	public formulario: FormGroup;
+
+	@ViewChild(HistoricoPecaComponent) private historico?: HistoricoPecaComponent;
 
 	public readonly anoMinimo = ANO_MINIMO;
 	public readonly anoMaximo = ANO_MAXIMO;
@@ -53,6 +57,7 @@ export class FormularioPecaComponent implements OnInit {
 				year_end: ['', ano],
 				purchase_price: [null as number | null, [Validators.required, Validators.min(0), Validators.max(VALOR_MAXIMO)]],
 				sale_price: [null as number | null, [Validators.required, Validators.min(0), Validators.max(VALOR_MAXIMO)]],
+				purchase_date: [hojeIso(), [Validators.required, (c: { value: string }) => (deDataIso(c.value) ? null : { data: true })]],
 				quantity: [0 as number | null, [Validators.required, Validators.min(0)]],
 			},
 			{ validators: anosMoto() },
@@ -79,8 +84,11 @@ export class FormularioPecaComponent implements OnInit {
 					year_end: peca.year_end ? String(peca.year_end) : '',
 					purchase_price: peca.purchase_price,
 					sale_price: peca.sale_price,
+					purchase_date: peca.purchase_date,
 					quantity: peca.quantity,
 				});
+				// A quantidade só muda por movimentação (+/−, venda), para ficar registrada no financeiro.
+				this.formulario.get('quantity')?.disable();
 				this.estado.set('carregado');
 			},
 			error: () => this.estado.set('erro'),
@@ -102,17 +110,18 @@ export class FormularioPecaComponent implements OnInit {
 			return;
 		}
 		const valores = this.formulario.getRawValue();
-		const dados: PecaFormulario = {
+		const dados: PecaEdicao = {
 			name: valores.name.trim(),
 			motorcycle_model: textoOuNulo(valores.motorcycle_model),
 			year_start: valores.year_start ? Number(valores.year_start) : null,
 			year_end: valores.year_end ? Number(valores.year_end) : null,
 			purchase_price: valores.purchase_price,
 			sale_price: valores.sale_price,
-			quantity: valores.quantity,
+			purchase_date: valores.purchase_date,
 		};
 		const peca = this.peca();
-		const requisicao = peca ? this.estoqueService.atualizar(peca.id, dados) : this.estoqueService.criar(dados);
+		const nova: PecaFormulario = { ...dados, quantity: valores.quantity };
+		const requisicao = peca ? this.estoqueService.atualizar(peca.id, dados) : this.estoqueService.criar(nova);
 		this.salvando.set(true);
 		requisicao.subscribe({
 			next: () => {
@@ -152,6 +161,27 @@ export class FormularioPecaComponent implements OnInit {
 				});
 			},
 		});
+	}
+
+	public abrirVenda(): void {
+		this.vendendo.set(true);
+	}
+
+	public aoVender(venda: MovimentoPeca): void {
+		this.vendendo.set(false);
+		this.atualizarQuantidade(this.peca()!.quantity - venda.quantity);
+		this.historico?.carregar();
+	}
+
+	public aoEstornar(peca: Peca): void {
+		this.atualizarQuantidade(peca.quantity);
+	}
+
+	private atualizarQuantidade(quantidade: number): void {
+		const peca = this.peca();
+		if (!peca) return;
+		this.peca.set({ ...peca, quantity: quantidade });
+		this.formulario.get('quantity')?.setValue(quantidade);
 	}
 
 	public voltar(): void {

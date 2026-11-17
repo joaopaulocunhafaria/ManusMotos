@@ -1,7 +1,8 @@
 import { Component, OnDestroy, OnInit, signal } from '@angular/core';
 import { Router } from '@angular/router';
-import type { Peca } from '@manus/shared';
+import type { MovimentoPeca, Peca } from '@manus/shared';
 import { MessageService } from 'primeng/api';
+import { formatarDataIso } from '../../../../utils/_metodos/datas';
 import { mensagemErro } from '../../../../utils/_metodos/supabase';
 import { EstadoTela } from '../../../../utils/_models/estado-tela';
 import { formatarAnos } from '../../_metodos/margem';
@@ -20,9 +21,12 @@ export class ListagemEstoqueComponent implements OnInit, OnDestroy {
 	public carregandoMais = signal(false);
 	/** Peças com ajuste de quantidade em andamento (botões desabilitados). */
 	public ajustando = signal<ReadonlySet<string>>(new Set());
+	/** Peça com o drawer de venda aberto. */
+	public pecaVenda = signal<Peca | null>(null);
 	public busca = '';
 
 	public readonly formatarAnos = formatarAnos;
+	public readonly formatarData = formatarDataIso;
 
 	private pagina = 0;
 	private temporizadorBusca?: ReturnType<typeof setTimeout>;
@@ -98,6 +102,19 @@ export class ListagemEstoqueComponent implements OnInit, OnDestroy {
 				this.messageService.add({ severity: 'error', summary: mensagemErro(erro, 'Não foi possível alterar a quantidade.') });
 			},
 		});
+	}
+
+	public abrirVenda(peca: Peca): void {
+		this.pecaVenda.set(peca);
+	}
+
+	public fecharVenda(): void {
+		this.pecaVenda.set(null);
+	}
+
+	public aoVender(venda: MovimentoPeca): void {
+		this.pecas.update((pecas) => pecas.map((p) => (p.id === venda.part_id ? { ...p, quantity: p.quantity - venda.quantity } : p)));
+		this.fecharVenda();
 	}
 
 	public severidadeMargem(peca: Peca): 'success' | 'danger' | 'secondary' {

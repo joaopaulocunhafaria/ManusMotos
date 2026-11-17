@@ -1,0 +1,50 @@
+<section aria-labelledby="historico-titulo" class="flex flex-col gap-2">
+	<h2 id="historico-titulo" class="m-0 text-base font-semibold">Histórico</h2>
+
+	<app-estado
+		[modo]="estado()"
+		mensagemVazio="Nenhuma movimentação."
+		mensagemErro="Não foi possível carregar o histórico."
+		(recarregar)="carregar()"
+	></app-estado>
+
+	<ul *ngIf="estado() === 'carregado'" class="m-0 flex list-none flex-col gap-2 p-0">
+		<li
+			*ngFor="let movimento of movimentos()"
+			class="movimento flex items-center gap-3 rounded-lg border border-[var(--cor-borda)] bg-[var(--cor-superficie)] py-2 pr-2 pl-4"
+			[attr.data-movimento]="movimento.id"
+		>
+			<span class="flex min-w-0 flex-1 flex-col gap-1">
+				<span class="flex flex-wrap items-center gap-2">
+					<p-tag [value]="rotulo(movimento.kind)" [severity]="severidade(movimento.kind)" />
+					<span class="text-sm text-gray-500">{{ formatarData(movimento.movement_date) }}</span>
+				</span>
+				<span class="text-sm">
+					{{ movimento.quantity }} × {{ movimento.unit_price | currency }} =
+					<strong class="whitespace-nowrap">{{ movimento.total | currency }}</strong>
+				</span>
+				<span *ngIf="movimento.notes" class="truncate text-sm text-gray-500">{{ movimento.notes }}</span>
+			</span>
+			<p-button
+				*ngIf="movimento.kind === 'sale'"
+				label="Estornar"
+				variant="text"
+				severity="danger"
+				styleClass="min-h-11"
+				[ariaLabel]="'Estornar venda de ' + formatarData(movimento.movement_date)"
+				[loading]="estornando() === movimento.id"
+				[disabled]="estornando() !== null"
+				(onClick)="confirmarEstorno(movimento)"
+			/>
+		</li>
+	</ul>
+
+	<p-button
+		*ngIf="estado() === 'carregado' && movimentos().length < total()"
+		label="Carregar mais"
+		variant="outlined"
+		styleClass="w-full min-h-11"
+		[loading]="carregandoMais()"
+		(onClick)="carregarMais()"
+	/>
+</section>

@@ -158,9 +158,9 @@ export class DetalheOrdemServicoComponent implements OnInit, OnDestroy {
 	public alterarStatus(status: StatusOrdemServico): void {
 		this.alterandoStatus.set(true);
 		this.ordemServicoService.atualizarStatus(this.id, status).subscribe({
-			next: () => {
+			next: ({ completed_at }) => {
 				this.alterandoStatus.set(false);
-				this.ordem.update((ordem) => (ordem ? { ...ordem, status } : ordem));
+				this.ordem.update((ordem) => (ordem ? { ...ordem, status, completed_at } : ordem));
 				this.messageService.add({ severity: 'success', summary: `Status: ${LABEL_STATUS[status]}.` });
 				// Concluir/recusar/cancelar pausa o cronômetro no banco: traz o tempo acumulado.
 				if (STATUS_SEM_CRONOMETRO.includes(status) && this.cronometroLigado()) this.recarregarCronometro();

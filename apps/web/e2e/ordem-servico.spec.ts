@@ -355,8 +355,14 @@ test.describe('Ordem de serviço: detalhe, status e versão do cliente', () => {
 		await passo('Reenviar ao cliente', 'Aguardando aprovação');
 		await passo('Cliente aprovou', 'Aprovada');
 		await passo('Iniciar serviço', 'Em andamento');
+		await expect(page.locator('#os-concluida-em')).toHaveCount(0);
 		await passo('Concluir serviço', 'Concluída', true);
-		expect((await banco.ordem(ordem.id)).status).toBe('completed');
+		const concluida = await banco.ordem(ordem.id);
+		expect(concluida.status).toBe('completed');
+		// A data de conclusão é gravada pelo banco e é a base da receita no financeiro.
+		expect(concluida.completed_at).toBeTruthy();
+		expect(Math.abs(Date.now() - new Date(concluida.completed_at!).getTime())).toBeLessThan(5 * 60_000);
+		await expect(page.locator('#os-concluida-em')).toHaveText(/^\s*Concluída em \d{2}\/\d{2}\/\d{4} \d{2}:\d{2}\s*$/);
 
 		// Concluída: sem próximos passos e sem "Cancelar OS".
 		await expect(page.getByRole('button', { name: /Cliente|Iniciar serviço|Concluir|Reenviar|Marcar/ })).toHaveCount(0);
