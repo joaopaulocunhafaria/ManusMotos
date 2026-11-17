@@ -119,6 +119,12 @@
 		</div>
 
 		<div class="flex flex-col gap-1">
+			<label for="peca-data-entrada" class="text-sm font-medium">Data de entrada *</label>
+			<input pInputText id="peca-data-entrada" type="date" formControlName="purchase_date" class="min-h-11 w-full min-w-0" />
+			<small *ngIf="invalido('purchase_date')" class="text-red-600">Informe a data de entrada da peça.</small>
+		</div>
+
+		<div class="flex flex-col gap-1">
 			<label for="peca-quantidade" class="text-sm font-medium">Quantidade em estoque *</label>
 			<p-inputNumber
 				formControlName="quantity"
@@ -130,7 +136,20 @@
 				inputStyleClass="min-h-11"
 			/>
 			<small *ngIf="invalido('quantity')" class="text-red-600">Informe a quantidade (zero ou mais).</small>
+			<small *ngIf="peca()" id="peca-quantidade-ajuda" class="text-gray-500">
+				Use + / − na listagem ou "Vender" para mudar a quantidade.
+			</small>
 		</div>
+
+		<p-button
+			*ngIf="peca() as atual"
+			label="Vender"
+			icon="pi pi-shopping-cart"
+			variant="outlined"
+			styleClass="w-full min-h-11"
+			[disabled]="atual.quantity <= 0 || salvando()"
+			(onClick)="abrirVenda()"
+		/>
 
 		<p-button type="submit" label="Salvar" icon="pi pi-check" styleClass="w-full min-h-11" [loading]="salvando()" />
 		<p-button
@@ -144,6 +163,23 @@
 			(onClick)="confirmarExclusao()"
 		/>
 	</form>
+
+	<app-historico-peca *ngIf="estado() === 'carregado' && peca() as atual" [pecaId]="atual.id" (estornada)="aoEstornar($event)" />
 </div>
+
+<p-drawer
+	[visible]="vendendo()"
+	(visibleChange)="vendendo.set($event)"
+	position="bottom"
+	header="Vender peça"
+	styleClass="!h-auto max-h-[90dvh] rounded-t-2xl"
+>
+	<app-formulario-venda
+		*ngIf="vendendo() && peca() as atual"
+		[peca]="atual"
+		(vendida)="aoVender($event)"
+		(cancelado)="vendendo.set(false)"
+	/>
+</p-drawer>
 
 <p-confirmDialog [style]="{ width: '100vw', maxWidth: '24rem' }" />

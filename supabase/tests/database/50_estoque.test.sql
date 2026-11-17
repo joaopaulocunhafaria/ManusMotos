@@ -1,7 +1,7 @@
 -- Estoque de peças (parts, search_parts, adjust_part_quantity), papel anon.
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(41);
+select plan(44);
 
 set local role anon;
 
@@ -11,6 +11,8 @@ select lives_ok($$ insert into public.parts (id, name, motorcycle_model, year_st
 select lives_ok($$ insert into public.parts (id, name) values ('50000000-0000-4000-8000-000000000002', 'Óleo Estoque DB') $$,
   'cria peça só com nome (sem moto nem anos)');
 select is((select quantity from public.parts where id = '50000000-0000-4000-8000-000000000002'), 0, 'quantidade padrão 0');
+select is((select purchase_date from public.parts where id = '50000000-0000-4000-8000-000000000002'), public.local_today(), 'data de entrada padrão é hoje (fuso da oficina)');
+select throws_ok($$ insert into public.parts (name, purchase_date) values ('Sem data DB', null) $$, '23502', null, 'data de entrada nula é recusada');
 select lives_ok($$ insert into public.parts (name, year_start, year_end) values ('Ano igual DB', 2018, 2018) $$, 'ano final igual ao inicial é válido');
 select lives_ok($$ insert into public.parts (name, year_start, year_end) values ('Limites DB', 1950, 2100) $$, 'anos nos limites (1950 e 2100)');
 select lives_ok($$ insert into public.parts (name) values (repeat('a', 120)) $$, 'nome com 120 caracteres é válido');
@@ -62,6 +64,9 @@ select throws_ok($$ select public.adjust_part_quantity('50000000-0000-4000-8000-
   'saída acima do estoque é recusada');
 select throws_ok($$ select public.adjust_part_quantity('50000000-0000-4000-8000-0000000000ff', 1) $$, 'P0002', 'Peça não encontrada.',
   'peça inexistente');
+
+select throws_ok($$ update public.parts set quantity = 99 where id = '50000000-0000-4000-8000-000000000001' $$, '42501', null,
+  'anon não altera a quantidade direto (só pelas funções)');
 
 -- Edição e exclusão pelo app
 select lives_ok($$ update public.parts set name = 'Pastilha Estoque DB editada' where id = '50000000-0000-4000-8000-000000000001' $$, 'anon edita peça');

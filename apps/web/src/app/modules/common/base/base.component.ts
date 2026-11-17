@@ -29,6 +29,7 @@ export class BaseComponent implements OnDestroy {
 		{ ...OS, label: 'Ordens de serviço' },
 		ESTOQUE,
 		CLIENTES,
+		{ label: 'Financeiro', icone: 'pi pi-wallet', rota: '/administracao/financeiro' },
 		{ label: 'Serviços', icone: 'pi pi-wrench', rota: '/administracao/servicos' },
 		{ label: 'Aparência', icone: 'pi pi-palette', rota: '/administracao/configuracoes' },
 	];

@@ -1,0 +1,73 @@
+<form [formGroup]="formulario" (ngSubmit)="vender()" class="flex flex-col gap-4" novalidate>
+	<p class="m-0 text-sm text-gray-600">
+		<span class="font-medium text-[var(--cor-texto)]">{{ peca.name }}</span>
+		· {{ peca.quantity }} {{ peca.quantity === 1 ? 'unidade' : 'unidades' }} em estoque
+	</p>
+
+	<div class="grid grid-cols-2 gap-3">
+		<div class="flex min-w-0 flex-col gap-1">
+			<label for="venda-quantidade" class="text-sm font-medium">Quantidade *</label>
+			<p-inputNumber
+				formControlName="quantidade"
+				inputId="venda-quantidade"
+				[min]="0"
+				[max]="999999"
+				[useGrouping]="false"
+				[fluid]="true"
+				inputStyleClass="min-h-11"
+			/>
+		</div>
+		<div class="flex min-w-0 flex-col gap-1">
+			<label for="venda-preco" class="text-sm font-medium">Preço unitário *</label>
+			<p-inputNumber
+				formControlName="preco"
+				inputId="venda-preco"
+				mode="currency"
+				currency="BRL"
+				locale="pt-BR"
+				[min]="0"
+				[max]="valorMaximo"
+				[fluid]="true"
+				inputStyleClass="min-h-11"
+				placeholder="R$ 0,00"
+			/>
+		</div>
+	</div>
+	<small *ngIf="erro('quantidade', 'required') || erro('quantidade', 'min')" class="-mt-2 text-red-600">
+		Informe pelo menos 1 unidade.
+	</small>
+	<small *ngIf="erro('quantidade', 'max')" class="-mt-2 text-red-600">Estoque insuficiente: há {{ peca.quantity }} em estoque.</small>
+	<small *ngIf="invalido('preco')" class="-mt-2 text-red-600">Informe o preço de venda.</small>
+
+	<div class="flex flex-col gap-1">
+		<label for="venda-data" class="text-sm font-medium">Data da venda *</label>
+		<input pInputText id="venda-data" type="date" formControlName="data" class="min-h-11 w-full min-w-0" />
+		<small *ngIf="invalido('data')" class="text-red-600">Informe a data da venda.</small>
+	</div>
+
+	<div class="flex flex-col gap-1">
+		<label for="venda-observacao" class="text-sm font-medium">Observação</label>
+		<input
+			pInputText
+			id="venda-observacao"
+			formControlName="observacao"
+			maxlength="300"
+			autocomplete="off"
+			placeholder="Ex.: cliente, balcão"
+			class="min-h-11 w-full"
+		/>
+	</div>
+
+	<div id="venda-resumo" class="rounded-lg border border-[var(--cor-borda)] px-4 py-3" aria-live="polite">
+		<p class="m-0 text-base">
+			Total:
+			<strong>{{ total() | currency }}</strong>
+		</p>
+		<p class="mt-1 mb-0 text-sm" [class.text-red-700]="lucro() < 0" [class.text-gray-600]="lucro() >= 0">
+			Lucro previsto: {{ lucro() | currency }}
+		</p>
+	</div>
+
+	<p-button type="submit" label="Confirmar venda" icon="pi pi-check" styleClass="w-full min-h-11" [loading]="salvando()" />
+	<p-button label="Cancelar" variant="text" styleClass="w-full min-h-11" [disabled]="salvando()" (onClick)="cancelado.emit()" />
+</form>

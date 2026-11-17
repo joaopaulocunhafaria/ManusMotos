@@ -1,6 +1,6 @@
 import { Page } from '@playwright/test';
 import { esperarAlvosDeToque, esperarSemScrollHorizontal, expect, preencherNumero, test, toast } from './apoio/fixtures';
-import { unico } from './apoio/geradores';
+import { hojeIsoLocal, unico } from './apoio/geradores';
 
 const cartao = (page: Page, nome: string) => page.locator('li.peca').filter({ hasText: nome });
 const dialogo = (page: Page) => page.locator('div.p-confirmdialog');
@@ -157,7 +157,7 @@ test.describe('Estoque', () => {
 			await page.goto('/administracao/estoque');
 			await buscar(page, peca.name);
 			await expect(cartao(page, peca.name)).toContainText('1 unidade');
-			await banco.client.from('parts').update({ quantity: 0 }).eq('id', peca.id);
+			await banco.client.rpc('adjust_part_quantity', { p_id: peca.id, p_delta: -1 });
 			await cartao(page, peca.name)
 				.getByRole('button', { name: `Diminuir quantidade de ${peca.name}` })
 				.click();
@@ -402,6 +402,260 @@ test.describe('Estoque', () => {
 		});
 	});
 
+	test.describe('data de entrada', () => {
+		test('nova peça vem com a data de hoje; a data escolhida é gravada, gera a compra e aparece no card', async ({ page, banco }) => {
+			const nome = `Disco ${unico()}`;
+			await abrirNova(page);
+			await expect(page.locator('#peca-data-entrada')).toHaveValue(hojeIsoLocal());
+			await preencherPeca(page, { nome, compra: '80', venda: '120', quantidade: '3' });
+			await page.locator('#peca-data-entrada').fill('2025-03-10');
+			await salvar(page).click();
+			await expect(toast(page, 'Peça cadastrada.')).toBeVisible();
+
+			const [salva] = await banco.pecasPorNome(nome);
+			expect(salva).toMatchObject({ purchase_date: '2025-03-10', quantity: 3 });
+			const movimentos = await banco.movimentosDaPeca(salva.id);
+			expect(movimentos).toEqual([
+				expect.objectContaining({ kind: 'purchase', quantity: 3, unit_price: 80, total: 240, movement_date: '2025-03-10' }),
+			]);
+			await buscar(page, nome);
+			await expect(cartao(page, nome)).toContainText('Entrada em 10/03/2025');
+		});
+
+		test('peça cadastrada com quantidade zero não gera compra', async ({ page, banco }) => {
+			const nome = `Retentor ${unico()}`;
+			await abrirNova(page);
+			await preencherPeca(page, { nome, compra: '10', venda: '20', quantidade: '0' });
+			await salvar(page).click();
+			await expect(toast(page, 'Peça cadastrada.')).toBeVisible();
+			const [salva] = await banco.pecasPorNome(nome);
+			expect(await banco.movimentosDaPeca(salva.id)).toEqual([]);
+		});
+
+		test('data de entrada vazia não é enviada', async ({ page, banco }) => {
+			const nome = `Sem data ${unico()}`;
+			await abrirNova(page);
+			await preencherPeca(page, { nome, compra: '10', venda: '20' });
+			await page.locator('#peca-data-entrada').fill('');
+			await salvar(page).click();
+			await expect(page.getByText('Informe a data de entrada da peça.')).toBeVisible();
+			await expect(page).toHaveURL(/\/estoque\/nova$/);
+			expect(await banco.pecasPorNome(nome)).toEqual([]);
+		});
+
+		test('na edição a quantidade fica só leitura e a data de entrada pode ser corrigida', async ({ page, banco }) => {
+			const peca = await banco.criarPeca({ name: `Farol ${unico()}`, quantity: 2, purchase_date: '2025-01-05' });
+			await page.goto(`/administracao/estoque/${peca.id}`);
+			await expect(page.locator('#peca-quantidade')).toBeDisabled();
+			await expect(page.getByText('Use + / − na listagem ou "Vender" para mudar a quantidade.')).toBeVisible();
+			await expect(page.locator('#peca-data-entrada')).toHaveValue('2025-01-05');
+			await page.locator('#peca-data-entrada').fill('2025-01-06');
+			await salvar(page).click();
+			await expect(toast(page, 'Peça atualizada.')).toBeVisible();
+			expect(await banco.peca(peca.id)).toMatchObject({ purchase_date: '2025-01-06', quantity: 2 });
+		});
+	});
+
+	test.describe('venda', () => {
+		const drawer = (page: Page) => page.locator('.p-drawer').filter({ hasText: 'Vender peça' });
+		const confirmar = (page: Page) => page.getByRole('button', { name: /^\W*Confirmar venda$/ });
+
+		async function abrirVendaNaLista(page: Page, nome: string): Promise<void> {
+			await page.goto('/administracao/estoque');
+			await buscar(page, nome);
+			await cartao(page, nome)
+				.getByRole('button', { name: `Vender ${nome}` })
+				.click();
+			await expect(drawer(page)).toBeVisible();
+		}
+
+		test('caminho feliz pela listagem: sugere o preço, grava a venda, baixa o estoque e atualiza o card', async ({ page, banco }) => {
+			const peca = await banco.criarPeca({ name: `Pneu ${unico()}`, purchase_price: 100, sale_price: 180, quantity: 5 });
+			await abrirVendaNaLista(page, peca.name);
+			await expect(page.locator('#venda-preco')).toHaveValue(/^R\$\s180,00$/);
+			await expect(page.locator('#venda-data')).toHaveValue(hojeIsoLocal());
+			await expect(page.locator('#venda-resumo')).toContainText('Total: R$ 180,00');
+
+			await preencherNumero(page, '#venda-quantidade', '2');
+			await preencherNumero(page, '#venda-preco', '175,50');
+			await page.locator('#venda-data').fill('2025-04-02');
+			await page.locator('#venda-observacao').fill('  Balcão  ');
+			await expect(page.locator('#venda-resumo')).toContainText('Total: R$ 351,00');
+			await expect(page.locator('#venda-resumo')).toContainText('Lucro previsto: R$ 151,00');
+			await confirmar(page).click();
+
+			await expect(toast(page, 'Venda registrada.')).toBeVisible();
+			await expect(drawer(page)).toBeHidden();
+			await expect(cartao(page, peca.name)).toContainText('3 unidades');
+			expect((await banco.peca(peca.id))!.quantity).toBe(3);
+			const venda = (await banco.movimentosDaPeca(peca.id)).find((m) => m.kind === 'sale');
+			expect(venda).toMatchObject({
+				quantity: 2,
+				unit_price: 175.5,
+				unit_cost: 100,
+				total: 351,
+				movement_date: '2025-04-02',
+				notes: 'Balcão',
+				part_name: peca.name,
+			});
+		});
+
+		test('vender todo o estoque é válido: mostra "Sem estoque" e desabilita Vender', async ({ page, banco }) => {
+			const peca = await banco.criarPeca({ name: `Bateria ${unico()}`, quantity: 2 });
+			await abrirVendaNaLista(page, peca.name);
+			await preencherNumero(page, '#venda-quantidade', '2');
+			await confirmar(page).click();
+			await expect(toast(page, 'Venda registrada.')).toBeVisible();
+			const card = cartao(page, peca.name);
+			await expect(card).toContainText('Sem estoque');
+			await expect(card.getByRole('button', { name: `Vender ${peca.name}` })).toBeDisabled();
+			expect((await banco.peca(peca.id))!.quantity).toBe(0);
+		});
+
+		test('quantidade acima do estoque não é enviada', async ({ page, banco }) => {
+			const peca = await banco.criarPeca({ name: `Lâmpada ${unico()}`, quantity: 2 });
+			await abrirVendaNaLista(page, peca.name);
+			await preencherNumero(page, '#venda-quantidade', '3');
+			await confirmar(page).click();
+			await expect(drawer(page).getByText('Estoque insuficiente: há 2 em estoque.')).toBeVisible();
+			expect((await banco.movimentosDaPeca(peca.id)).filter((m) => m.kind === 'sale')).toEqual([]);
+			expect((await banco.peca(peca.id))!.quantity).toBe(2);
+		});
+
+		test('quantidade zero ou vazia não é enviada', async ({ page, banco }) => {
+			const peca = await banco.criarPeca({ name: `Fusível ${unico()}`, quantity: 2 });
+			await abrirVendaNaLista(page, peca.name);
+			for (const valor of ['0', '']) {
+				await preencherNumero(page, '#venda-quantidade', valor);
+				await confirmar(page).click();
+				await expect(drawer(page).getByText('Informe pelo menos 1 unidade.')).toBeVisible();
+			}
+			expect((await banco.peca(peca.id))!.quantity).toBe(2);
+		});
+
+		test('preço vazio não é enviado; preço zero é aceito', async ({ page, banco }) => {
+			const peca = await banco.criarPeca({ name: `Brinde ${unico()}`, quantity: 2 });
+			await abrirVendaNaLista(page, peca.name);
+			await preencherNumero(page, '#venda-preco', '');
+			await confirmar(page).click();
+			await expect(drawer(page).getByText('Informe o preço de venda.')).toBeVisible();
+			await preencherNumero(page, '#venda-preco', '0');
+			await confirmar(page).click();
+			await expect(toast(page, 'Venda registrada.')).toBeVisible();
+			expect((await banco.movimentosDaPeca(peca.id)).find((m) => m.kind === 'sale')).toMatchObject({ unit_price: 0, total: 0 });
+		});
+
+		test('data vazia não é enviada', async ({ page, banco }) => {
+			const peca = await banco.criarPeca({ name: `Sem data venda ${unico()}`, quantity: 2 });
+			await abrirVendaNaLista(page, peca.name);
+			await page.locator('#venda-data').fill('');
+			await confirmar(page).click();
+			await expect(drawer(page).getByText('Informe a data da venda.')).toBeVisible();
+			expect((await banco.peca(peca.id))!.quantity).toBe(2);
+		});
+
+		test('cancelar fecha sem gravar nada', async ({ page, banco }) => {
+			const peca = await banco.criarPeca({ name: `Cancelada ${unico()}`, quantity: 2 });
+			await abrirVendaNaLista(page, peca.name);
+			await preencherNumero(page, '#venda-quantidade', '1');
+			await drawer(page).getByRole('button', { name: 'Cancelar' }).click();
+			await expect(drawer(page)).toBeHidden();
+			await expect(cartao(page, peca.name)).toContainText('2 unidades');
+			expect((await banco.movimentosDaPeca(peca.id)).filter((m) => m.kind === 'sale')).toEqual([]);
+		});
+
+		test('estoque vendido em outro aparelho: o banco recusa e mostra "Estoque insuficiente."', async ({ page, banco }) => {
+			const peca = await banco.criarPeca({ name: `Concorrida ${unico()}`, quantity: 1 });
+			await abrirVendaNaLista(page, peca.name);
+			await banco.venderPeca(peca.id, 1, 10, '2025-04-02');
+			await confirmar(page).click();
+			await expect(toast(page, 'Estoque insuficiente.')).toBeVisible();
+			expect((await banco.peca(peca.id))!.quantity).toBe(0);
+			expect((await banco.movimentosDaPeca(peca.id)).filter((m) => m.kind === 'sale')).toHaveLength(1);
+		});
+
+		test('pela edição da peça: vende, atualiza a quantidade e mostra no histórico', async ({ page, banco }) => {
+			const peca = await banco.criarPeca({ name: `Kit ${unico()}`, quantity: 3, purchase_date: '2025-02-01' });
+			await page.goto(`/administracao/estoque/${peca.id}`);
+			const historico = page.getByRole('region', { name: 'Histórico' });
+			await expect(historico.locator('li.movimento')).toHaveCount(1);
+			await expect(historico.locator('li.movimento').first()).toContainText('Compra');
+			await expect(historico.locator('li.movimento').first()).toContainText('01/02/2025');
+
+			await page.getByRole('button', { name: /^\W*Vender$/ }).click();
+			await preencherNumero(page, '#venda-quantidade', '1');
+			await page.locator('#venda-data').fill('2025-02-03');
+			await confirmar(page).click();
+			await expect(toast(page, 'Venda registrada.')).toBeVisible();
+			await expect(page.locator('#peca-quantidade')).toHaveValue('2');
+			await expect(historico.locator('li.movimento')).toHaveCount(2);
+			await expect(historico.locator('li.movimento').first()).toContainText('Venda');
+			await expect(historico.locator('li.movimento').first()).toContainText('03/02/2025');
+			expect((await banco.peca(peca.id))!.quantity).toBe(2);
+		});
+
+		test('Vender fica desabilitado na edição de peça sem estoque', async ({ page, banco }) => {
+			const peca = await banco.criarPeca({ name: `Zerada ${unico()}`, quantity: 0 });
+			await page.goto(`/administracao/estoque/${peca.id}`);
+			await expect(page.getByRole('button', { name: /^\W*Vender$/ })).toBeDisabled();
+			await expect(page.getByText('Nenhuma movimentação.')).toBeVisible();
+		});
+	});
+
+	test.describe('histórico e estorno', () => {
+		test('+ vira compra e − vira ajuste no histórico', async ({ page, banco }) => {
+			const peca = await banco.criarPeca({ name: `Mola ${unico()}`, quantity: 0, purchase_price: 15 });
+			await page.goto('/administracao/estoque');
+			await buscar(page, peca.name);
+			const card = cartao(page, peca.name);
+			await card.getByRole('button', { name: `Aumentar quantidade de ${peca.name}` }).click();
+			await expect(card).toContainText('1 unidade');
+			await card.getByRole('button', { name: `Diminuir quantidade de ${peca.name}` }).click();
+			await expect(card).toContainText('0 unidades');
+			expect(await banco.movimentosDaPeca(peca.id)).toEqual([
+				expect.objectContaining({ kind: 'purchase', quantity: 1, unit_price: 15, movement_date: hojeIsoLocal() }),
+				expect.objectContaining({ kind: 'adjustment', quantity: 1 }),
+			]);
+			await card.getByRole('link').click();
+			const historico = page.getByRole('region', { name: 'Histórico' });
+			await expect(historico.locator('li.movimento').filter({ hasText: 'Compra' })).toHaveCount(1);
+			await expect(historico.locator('li.movimento').filter({ hasText: 'Saída (ajuste)' })).toHaveCount(1);
+			await expect(historico.getByRole('button', { name: /Estornar/ })).toHaveCount(0);
+		});
+
+		test('estornar venda: cancelar mantém; confirmar devolve o estoque e apaga a venda', async ({ page, banco }) => {
+			const peca = await banco.criarPeca({ name: `Estorno ${unico()}`, quantity: 3 });
+			await banco.venderPeca(peca.id, 2, 50, '2025-05-05');
+			await page.goto(`/administracao/estoque/${peca.id}`);
+			await expect(page.locator('#peca-quantidade')).toHaveValue('1');
+			const estornar = page.getByRole('button', { name: 'Estornar venda de 05/05/2025' });
+
+			await estornar.click();
+			await expect(dialogo(page)).toContainText('A venda de 2 unidades será apagada e as unidades voltam ao estoque.');
+			await dialogo(page).getByRole('button', { name: 'Voltar' }).click();
+			expect((await banco.movimentosDaPeca(peca.id)).filter((m) => m.kind === 'sale')).toHaveLength(1);
+
+			await estornar.click();
+			await dialogo(page).getByRole('button', { name: 'Estornar' }).click();
+			await expect(toast(page, 'Venda estornada.')).toBeVisible();
+			await expect(page.locator('#peca-quantidade')).toHaveValue('3');
+			await expect(estornar).toHaveCount(0);
+			expect((await banco.peca(peca.id))!.quantity).toBe(3);
+			expect((await banco.movimentosDaPeca(peca.id)).filter((m) => m.kind === 'sale')).toEqual([]);
+		});
+
+		test('histórico com mais de 20 movimentações pagina com "Carregar mais"', async ({ page, banco }) => {
+			const peca = await banco.criarPeca({ name: `Muitas ${unico()}`, quantity: 22 });
+			for (let i = 0; i < 21; i++) await banco.venderPeca(peca.id, 1, 1, '2025-06-01');
+			await page.goto(`/administracao/estoque/${peca.id}`);
+			const historico = page.getByRole('region', { name: 'Histórico' });
+			await expect(historico.locator('li.movimento')).toHaveCount(20);
+			await historico.getByRole('button', { name: 'Carregar mais' }).click();
+			await expect(historico.locator('li.movimento')).toHaveCount(22);
+			await expect(historico.getByRole('button', { name: 'Carregar mais' })).toHaveCount(0);
+		});
+	});
+
 	test.describe('mobile (375 px)', () => {
 		test('listagem sem scroll horizontal e com alvos de toque ≥ 44 px', async ({ page, banco }) => {
 			const peca = await banco.criarPeca({
@@ -428,6 +682,25 @@ test.describe('Estoque', () => {
 				.locator('input:visible')
 				.evaluateAll((campos) => campos.filter((c) => parseFloat(getComputedStyle(c).fontSize) < 16).map((c) => c.id));
 			expect(pequenos).toEqual([]);
+		});
+
+		test('drawer de venda sem scroll horizontal, alvos ≥ 44 px, inputs ≥ 16 px e teclado numérico', async ({ page, banco }) => {
+			const peca = await banco.criarPeca({ name: `Peça com nome bem comprido para o drawer de venda ${unico()}`, quantity: 1 });
+			await page.goto('/administracao/estoque');
+			await buscar(page, peca.name);
+			await cartao(page, peca.name)
+				.getByRole('button', { name: `Vender ${peca.name}` })
+				.click();
+			const drawer = page.locator('.p-drawer');
+			await expect(drawer).toBeVisible();
+			await esperarSemScrollHorizontal(page);
+			await esperarAlvosDeToque(drawer.locator('form'));
+			const pequenos = await drawer
+				.locator('input:visible')
+				.evaluateAll((campos) => campos.filter((c) => parseFloat(getComputedStyle(c).fontSize) < 16).map((c) => c.id));
+			expect(pequenos).toEqual([]);
+			await expect(page.locator('#venda-quantidade')).toHaveAttribute('inputmode', /decimal|numeric/);
+			await expect(page.locator('#venda-preco')).toHaveAttribute('inputmode', /decimal|numeric/);
 		});
 
 		test('campos de ano e valores abrem o teclado numérico', async ({ page }) => {

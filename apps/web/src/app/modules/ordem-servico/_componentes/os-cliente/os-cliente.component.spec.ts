@@ -24,6 +24,7 @@ describe('OsClienteComponent', () => {
 		work_estimate_minutes: 30,
 		work_seconds: 4321,
 		work_started_at: null,
+		completed_at: null,
 		notes: 'NOTA INTERNA SECRETA',
 		customer_notes: 'Peças inclusas.',
 		created_at: '',

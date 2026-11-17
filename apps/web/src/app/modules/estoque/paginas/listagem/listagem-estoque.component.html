@@ -50,6 +50,7 @@
 						· Venda
 						<span class="whitespace-nowrap">{{ peca.sale_price | currency }}</span>
 					</span>
+					<span class="data-entrada text-sm text-gray-500">Entrada em {{ formatarData(peca.purchase_date) }}</span>
 				</span>
 				<p-tag
 					class="margem shrink-0"
@@ -79,6 +80,15 @@
 					[disabled]="ajustando().has(peca.id)"
 					(onClick)="ajustarQuantidade(peca, 1)"
 				/>
+				<p-button
+					label="Vender"
+					icon="pi pi-shopping-cart"
+					variant="outlined"
+					styleClass="min-h-11"
+					[ariaLabel]="'Vender ' + peca.name"
+					[disabled]="peca.quantity <= 0 || ajustando().has(peca.id)"
+					(onClick)="abrirVenda(peca)"
+				/>
 			</div>
 		</li>
 	</ul>
@@ -92,3 +102,13 @@
 		(onClick)="carregarMais()"
 	/>
 </div>
+
+<p-drawer
+	[visible]="pecaVenda() !== null"
+	(visibleChange)="$event || fecharVenda()"
+	position="bottom"
+	header="Vender peça"
+	styleClass="!h-auto max-h-[90dvh] rounded-t-2xl"
+>
+	<app-formulario-venda *ngIf="pecaVenda() as peca" [peca]="peca" (vendida)="aoVender($event)" (cancelado)="fecharVenda()" />
+</p-drawer>

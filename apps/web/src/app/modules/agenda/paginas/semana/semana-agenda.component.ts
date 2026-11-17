@@ -4,15 +4,8 @@ import type { Agendamento } from '@manus/shared';
 import { Subscription } from 'rxjs';
 import { EstadoTela } from '../../../../utils/_models/estado-tela';
 import { ALTURA_HORA_PX } from '../../_constantes/agenda';
-import {
-	adicionarDias,
-	deDataIso,
-	horarioDeMinutos,
-	inicioDaSemana,
-	paraDataIso,
-	proximaHoraCheia,
-	rotuloSemana,
-} from '../../_metodos/datas';
+import { adicionarDias, deDataIso, inicioDaSemana, paraDataIso } from '../../../../utils/_metodos/datas';
+import { horarioDeMinutos, proximaHoraCheia, rotuloSemana } from '../../_metodos/datas';
 import { faixaHoras, montarBlocosDoDia } from '../../_metodos/layout-grade';
 import { BlocoAgendamento, ContextoFormulario, DiaGrade } from '../../_modelos/agendamento.model';
 import { AgendamentosService } from '../../_servicos/agendamentos.service';

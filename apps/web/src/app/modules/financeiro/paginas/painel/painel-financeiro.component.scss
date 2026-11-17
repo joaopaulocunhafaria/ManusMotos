@@ -1,0 +1,32 @@
+/* Cards de valor do balanço e linhas do extrato. */
+.cartao-valor {
+	display: flex;
+	min-width: 0;
+	flex-direction: column;
+	gap: 0.125rem;
+	border: 1px solid var(--cor-borda);
+	border-radius: 0.5rem;
+	background: var(--cor-superficie);
+	padding: 0.75rem;
+}
+
+.linha-extrato {
+	display: flex;
+	min-height: 3.5rem;
+	align-items: flex-start;
+	gap: 0.75rem;
+	border: 1px solid var(--cor-borda);
+	border-radius: 0.5rem;
+	background: var(--cor-superficie);
+	padding: 0.75rem 1rem;
+}
+
+/* Valores longos (R$ 1.234.567,89) quebram em vez de gerar scroll horizontal. */
+.valor {
+	overflow-wrap: anywhere;
+}
+
+.saldo-positivo {
+	border-color: #86efac;
+	background: #f0fdf4;
+}

@@ -68,6 +68,62 @@ export type Database = {
 					},
 				];
 			};
+			cash_entries: {
+				Row: {
+					amount: number;
+					created_at: string;
+					description: string;
+					entry_date: string;
+					id: string;
+					kind: string;
+					notes: string | null;
+					updated_at: string;
+				};
+				ComputedFields: never;
+				Insert: {
+					amount: number;
+					created_at?: string;
+					description: string;
+					entry_date?: string;
+					id?: string;
+					kind: string;
+					notes?: string | null;
+					updated_at?: string;
+				};
+				Update: {
+					amount?: number;
+					created_at?: string;
+					description?: string;
+					entry_date?: string;
+					id?: string;
+					kind?: string;
+					notes?: string | null;
+					updated_at?: string;
+				};
+				Relationships: [];
+			};
+			cash_settings: {
+				Row: {
+					id: number;
+					opening_balance: number;
+					opening_date: string;
+					updated_at: string;
+				};
+				ComputedFields: never;
+				Insert: {
+					id?: number;
+					opening_balance?: number;
+					opening_date?: string;
+					updated_at?: string;
+				};
+				Update: {
+					id?: number;
+					opening_balance?: number;
+					opening_date?: string;
+					updated_at?: string;
+				};
+				Relationships: [];
+			};
 			clients: {
 				Row: {
 					address: string | null;
@@ -196,6 +252,57 @@ export type Database = {
 					},
 				];
 			};
+			part_movements: {
+				Row: {
+					created_at: string;
+					id: string;
+					kind: string;
+					movement_date: string;
+					notes: string | null;
+					part_id: string | null;
+					part_name: string;
+					quantity: number;
+					total: number | null;
+					unit_cost: number;
+					unit_price: number;
+				};
+				ComputedFields: never;
+				Insert: {
+					created_at?: string;
+					id?: string;
+					kind: string;
+					movement_date?: string;
+					notes?: string | null;
+					part_id?: string | null;
+					part_name: string;
+					quantity: number;
+					total?: never;
+					unit_cost?: number;
+					unit_price: number;
+				};
+				Update: {
+					created_at?: string;
+					id?: string;
+					kind?: string;
+					movement_date?: string;
+					notes?: string | null;
+					part_id?: string | null;
+					part_name?: string;
+					quantity?: number;
+					total?: never;
+					unit_cost?: number;
+					unit_price?: number;
+				};
+				Relationships: [
+					{
+						foreignKeyName: 'part_movements_part_id_fkey';
+						columns: ['part_id'];
+						isOneToOne: false;
+						referencedRelation: 'parts';
+						referencedColumns: ['id'];
+					},
+				];
+			};
 			parts: {
 				Row: {
 					created_at: string;
@@ -203,6 +310,7 @@ export type Database = {
 					motorcycle_model: string | null;
 					name: string;
 					profit_margin: number | null;
+					purchase_date: string;
 					purchase_price: number;
 					quantity: number;
 					sale_price: number;
@@ -217,6 +325,7 @@ export type Database = {
 					motorcycle_model?: string | null;
 					name: string;
 					profit_margin?: never;
+					purchase_date?: string;
 					purchase_price?: number;
 					quantity?: number;
 					sale_price?: number;
@@ -230,6 +339,7 @@ export type Database = {
 					motorcycle_model?: string | null;
 					name?: string;
 					profit_margin?: never;
+					purchase_date?: string;
 					purchase_price?: number;
 					quantity?: number;
 					sale_price?: number;
@@ -288,6 +398,7 @@ export type Database = {
 			service_orders: {
 				Row: {
 					client_id: string;
+					completed_at: string | null;
 					created_at: string;
 					customer_notes: string | null;
 					down_payment: number;
@@ -310,6 +421,7 @@ export type Database = {
 				ComputedFields: never;
 				Insert: {
 					client_id: string;
+					completed_at?: string | null;
 					created_at?: string;
 					customer_notes?: string | null;
 					down_payment?: number;
@@ -331,6 +443,7 @@ export type Database = {
 				};
 				Update: {
 					client_id?: string;
+					completed_at?: string | null;
 					created_at?: string;
 					customer_notes?: string | null;
 					down_payment?: number;
@@ -405,6 +518,7 @@ export type Database = {
 					motorcycle_model: string | null;
 					name: string;
 					profit_margin: number | null;
+					purchase_date: string;
 					purchase_price: number;
 					quantity: number;
 					sale_price: number;
@@ -419,10 +533,63 @@ export type Database = {
 					isSetofReturn: false;
 				};
 			};
+			cancel_part_sale: {
+				Args: { p_movement_id: string };
+				Returns: {
+					created_at: string;
+					id: string;
+					motorcycle_model: string | null;
+					name: string;
+					profit_margin: number | null;
+					purchase_date: string;
+					purchase_price: number;
+					quantity: number;
+					sale_price: number;
+					updated_at: string;
+					year_end: number | null;
+					year_start: number | null;
+				};
+				SetofOptions: {
+					from: '*';
+					to: 'parts';
+					isOneToOne: true;
+					isSetofReturn: false;
+				};
+			};
+			cash_balance_at: { Args: { p_date: string }; Returns: number };
+			cash_flows: {
+				Args: { p_end: string; p_start: string };
+				Returns: {
+					amount: number;
+					cost: number;
+					created_at: string;
+					description: string;
+					entry_date: string;
+					part_id: string;
+					quantity: number;
+					ref_id: string;
+					source: string;
+				}[];
+			};
+			financial_statement: {
+				Args: { p_end: string; p_start: string };
+				Returns: {
+					amount: number;
+					created_at: string;
+					description: string;
+					entry_date: string;
+					part_id: string;
+					ref_id: string;
+					source: string;
+				}[];
+			};
+			financial_summary: { Args: { p_end: string; p_start: string }; Returns: Json };
+			local_today: { Args: Record<PropertyKey, never>; Returns: string };
 			pause_service_order_timer: {
 				Args: { p_id: string };
 				Returns: {
 					client_id: string;
+					completed_at: string | null;
 					created_at: string;
 					customer_notes: string | null;
 					down_payment: number;
@@ -477,6 +644,7 @@ export type Database = {
 					motorcycle_model: string | null;
 					name: string;
 					profit_margin: number | null;
+					purchase_date: string;
 					purchase_price: number;
 					quantity: number;
 					sale_price: number;
@@ -495,6 +663,7 @@ export type Database = {
 				Args: { p_status?: string; p_term?: string };
 				Returns: {
 					client_id: string;
+					completed_at: string | null;
 					created_at: string;
 					customer_notes: string | null;
 					down_payment: number;
@@ -521,10 +690,33 @@ export type Database = {
 					isSetofReturn: true;
 				};
 			};
+			sell_part: {
+				Args: { p_date: string; p_notes?: string; p_part_id: string; p_quantity: number; p_unit_price: number };
+				Returns: {
+					created_at: string;
+					id: string;
+					kind: string;
+					movement_date: string;
+					notes: string | null;
+					part_id: string | null;
+					part_name: string;
+					quantity: number;
+					total: number | null;
+					unit_cost: number;
+					unit_price: number;
+				};
+				SetofOptions: {
+					from: '*';
+					to: 'part_movements';
+					isOneToOne: true;
+					isSetofReturn: false;
+				};
+			};
 			set_service_order_work_time: {
 				Args: { p_id: string; p_seconds: number };
 				Returns: {
 					client_id: string;
+					completed_at: string | null;
 					created_at: string;
 					customer_notes: string | null;
 					down_payment: number;
@@ -555,6 +747,7 @@ export type Database = {
 				Args: { p_id: string };
 				Returns: {
 					client_id: string;
+					completed_at: string | null;
 					created_at: string;
 					customer_notes: string | null;
 					down_payment: number;

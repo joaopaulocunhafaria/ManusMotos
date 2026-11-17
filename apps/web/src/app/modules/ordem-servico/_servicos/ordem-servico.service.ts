@@ -51,8 +51,9 @@ export class OrdemServicoService {
 		);
 	}
 
-	public atualizarStatus(id: string, status: StatusOrdemServico): Observable<null> {
-		return deSupabase(this.supabaseService.client.from('service_orders').update({ status }).eq('id', id));
+	/** Troca o status. Devolve a data de conclusão, preenchida pelo banco ao concluir (e limpa ao sair de "Concluída"). */
+	public atualizarStatus(id: string, status: StatusOrdemServico): Observable<{ completed_at: string | null }> {
+		return deSupabase(this.supabaseService.client.from('service_orders').update({ status }).eq('id', id).select('completed_at').single());
 	}
 
 	// ---------- Cronômetro de trabalho (relógio do banco) ----------

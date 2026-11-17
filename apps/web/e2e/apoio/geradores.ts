@@ -70,3 +70,8 @@ export function gerarCnpj(): string {
 	const d1 = digito(base);
 	return [...base, d1, digito([...base, d1])].join('');
 }
+
+/** Hoje no fuso da oficina (`YYYY-MM-DD`), o mesmo do navegador dos testes e do banco. */
+export function hojeIsoLocal(): string {
+	return new Date().toLocaleDateString('en-CA', { timeZone: 'America/Sao_Paulo' });
+}
