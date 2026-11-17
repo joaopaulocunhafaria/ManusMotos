@@ -1,7 +1,16 @@
 <div class="tela-cheia flex flex-col">
 	<header
-		class="area-segura-topo sticky top-0 z-10 flex min-h-14 items-center border-b border-[var(--cor-borda)] bg-[var(--cor-superficie)] px-4 py-2"
+		class="area-segura-topo sticky top-0 z-10 flex min-h-14 items-center gap-1 border-b border-[var(--cor-borda)] bg-[var(--cor-superficie)] py-2 pr-4 pl-1"
 	>
+		<button
+			type="button"
+			aria-label="Abrir menu"
+			[attr.aria-expanded]="menuAberto()"
+			class="flex min-h-11 min-w-11 cursor-pointer items-center justify-center rounded-lg border-0 bg-transparent text-[var(--cor-texto)]"
+			(click)="abrirMenu()"
+		>
+			<i class="pi pi-bars text-xl" aria-hidden="true"></i>
+		</button>
 		<span class="min-w-0 truncate text-lg font-bold text-[var(--cor-primaria)]">{{ temaService.config().shop_name }}</span>
 	</header>
 
@@ -14,7 +23,7 @@
 		class="area-segura-base sticky bottom-0 z-10 flex border-t border-[var(--cor-borda)] bg-[var(--cor-superficie)]"
 	>
 		<a
-			*ngFor="let item of itensNavegacao"
+			*ngFor="let item of itensBarra"
 			[routerLink]="item.rota"
 			routerLinkActive="text-[var(--cor-primaria)]"
 			ariaCurrentWhenActive="page"
@@ -23,5 +32,37 @@
 			<i [class]="item.icone" class="text-xl" aria-hidden="true"></i>
 			{{ item.label }}
 		</a>
+		<button
+			type="button"
+			[attr.aria-expanded]="menuAberto()"
+			class="flex min-h-14 flex-1 cursor-pointer flex-col items-center justify-center gap-1 border-0 bg-transparent text-xs text-gray-500"
+			(click)="abrirMenu()"
+		>
+			<i class="pi pi-bars text-xl" aria-hidden="true"></i>
+			Menu
+		</button>
 	</nav>
 </div>
+
+<p-drawer
+	[visible]="menuAberto()"
+	(visibleChange)="menuAberto.set($event)"
+	position="left"
+	[header]="temaService.config().shop_name"
+	ariaCloseLabel="Fechar menu"
+	styleClass="!w-[17rem] max-w-[85vw]"
+>
+	<nav aria-label="Menu lateral" class="area-segura-base flex flex-col gap-1">
+		<a
+			*ngFor="let item of itensMenu"
+			[routerLink]="item.rota"
+			routerLinkActive="bg-[var(--cor-fundo)] font-semibold text-[var(--cor-primaria)]"
+			ariaCurrentWhenActive="page"
+			class="flex min-h-12 items-center gap-3 rounded-lg px-3 text-base text-[var(--cor-texto)] no-underline"
+			(click)="fecharMenu()"
+		>
+			<i [class]="item.icone" class="text-lg" aria-hidden="true"></i>
+			{{ item.label }}
+		</a>
+	</nav>
+</p-drawer>

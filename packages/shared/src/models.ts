@@ -34,3 +34,8 @@ export type FormaPagamento = 'pix' | 'cash' | 'installments';
 export type Agendamento = Tables<'appointments'>;
 export type AgendamentoInsert = TablesInsert<'appointments'>;
 export type AgendamentoUpdate = TablesUpdate<'appointments'>;
+
+/** Peça do estoque. `profit_margin` (% sobre a venda) é calculada pelo banco. */
+export type Peca = Tables<'parts'>;
+export type PecaInsert = TablesInsert<'parts'>;
+export type PecaUpdate = TablesUpdate<'parts'>;

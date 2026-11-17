@@ -1,5 +1,5 @@
-import { FormControl } from '@angular/forms';
-import { corHex, cpfCnpj, placa, telefone } from './validadores';
+import { FormControl, FormGroup } from '@angular/forms';
+import { anosMoto, corHex, cpfCnpj, placa, telefone } from './validadores';
 
 describe('validadores', () => {
 	it('corHex aceita #rrggbb e rejeita outros formatos', () => {
@@ -28,5 +28,16 @@ describe('validadores', () => {
 		expect(placa()(new FormControl('abc-1234'))).toBeNull();
 		expect(placa()(new FormControl('ABC1D23'))).toBeNull();
 		expect(placa()(new FormControl('AB12345'))).toEqual({ placa: true });
+	});
+
+	it('anosMoto: ano final opcional, exige o inicial e não pode ser menor', () => {
+		const grupo = (inicio: unknown, fim: unknown) =>
+			anosMoto()(new FormGroup({ year_start: new FormControl(inicio), year_end: new FormControl(fim) }));
+		expect(grupo(null, null)).toBeNull();
+		expect(grupo('2015', '')).toBeNull();
+		expect(grupo('2015', '2020')).toBeNull();
+		expect(grupo('2018', '2018')).toBeNull();
+		expect(grupo('', '2020')).toEqual({ anoFinalSemInicial: true });
+		expect(grupo('2020', '2019')).toEqual({ anoFinalMenor: true });
 	});
 });

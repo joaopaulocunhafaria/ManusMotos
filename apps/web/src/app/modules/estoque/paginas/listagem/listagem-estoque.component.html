@@ -1,0 +1,94 @@
+<div class="mx-auto flex w-full max-w-xl flex-col gap-4">
+	<div>
+		<h1 class="m-0 text-xl font-semibold">Estoque</h1>
+		<p class="mt-1 mb-0 text-sm text-gray-500">Peças com valores de compra e venda. A margem é calculada sobre a venda.</p>
+	</div>
+
+	<p-button label="Nova peça" icon="pi pi-plus" styleClass="w-full min-h-11" (onClick)="abrirNova()" />
+
+	<p-iconfield>
+		<p-inputicon styleClass="pi pi-search" />
+		<input
+			pInputText
+			type="search"
+			enterkeyhint="search"
+			placeholder="Nome, modelo ou ano"
+			aria-label="Buscar peça"
+			class="min-h-11 w-full"
+			[value]="busca"
+			(input)="aoDigitarBusca($any($event.target).value)"
+		/>
+	</p-iconfield>
+
+	<app-estado
+		[modo]="estado()"
+		mensagemVazio="Nenhuma peça encontrada."
+		mensagemErro="Não foi possível carregar o estoque."
+		(recarregar)="carregar()"
+	></app-estado>
+
+	<ul *ngIf="estado() === 'carregado'" class="m-0 flex list-none flex-col gap-2 p-0">
+		<li
+			*ngFor="let peca of pecas()"
+			class="peca overflow-hidden rounded-lg border border-[var(--cor-borda)] bg-[var(--cor-superficie)]"
+			[attr.data-peca]="peca.id"
+		>
+			<a
+				[routerLink]="['/administracao/estoque', peca.id]"
+				class="flex min-h-14 items-start gap-3 px-4 pt-3 pb-2 text-[var(--cor-texto)] no-underline"
+			>
+				<i class="pi pi-box mt-1 text-[var(--cor-primaria)]" aria-hidden="true"></i>
+				<span class="flex min-w-0 flex-1 flex-col gap-1">
+					<span class="truncate font-medium">{{ peca.name }}</span>
+					<span class="truncate text-sm text-gray-500">
+						{{ peca.motorcycle_model || 'Qualquer moto' }}
+						<ng-container *ngIf="formatarAnos(peca.year_start, peca.year_end) as anos">· {{ anos }}</ng-container>
+					</span>
+					<span class="text-sm">
+						Compra
+						<span class="whitespace-nowrap">{{ peca.purchase_price | currency }}</span>
+						· Venda
+						<span class="whitespace-nowrap">{{ peca.sale_price | currency }}</span>
+					</span>
+				</span>
+				<p-tag
+					class="margem shrink-0"
+					[severity]="severidadeMargem(peca)"
+					[value]="peca.profit_margin === null ? 'Margem —' : 'Margem ' + (peca.profit_margin | number: '1.0-1') + '%'"
+				/>
+			</a>
+			<div class="flex items-center gap-2 border-t border-[var(--cor-borda)] px-2 py-1">
+				<p-button
+					icon="pi pi-minus"
+					variant="text"
+					styleClass="min-h-11 min-w-11"
+					[ariaLabel]="'Diminuir quantidade de ' + peca.name"
+					[disabled]="peca.quantity <= 0 || ajustando().has(peca.id)"
+					(onClick)="ajustarQuantidade(peca, -1)"
+				/>
+				<span class="quantidade min-w-0 flex-1 text-center text-sm">
+					<span class="text-base font-semibold">{{ peca.quantity }}</span>
+					{{ peca.quantity === 1 ? 'unidade' : 'unidades' }}
+				</span>
+				<p-tag *ngIf="peca.quantity === 0" value="Sem estoque" severity="warn" />
+				<p-button
+					icon="pi pi-plus"
+					variant="text"
+					styleClass="min-h-11 min-w-11"
+					[ariaLabel]="'Aumentar quantidade de ' + peca.name"
+					[disabled]="ajustando().has(peca.id)"
+					(onClick)="ajustarQuantidade(peca, 1)"
+				/>
+			</div>
+		</li>
+	</ul>
+
+	<p-button
+		*ngIf="estado() === 'carregado' && pecas().length < total()"
+		label="Carregar mais"
+		variant="outlined"
+		styleClass="w-full min-h-11"
+		[loading]="carregandoMais()"
+		(onClick)="carregarMais()"
+	/>
+</div>

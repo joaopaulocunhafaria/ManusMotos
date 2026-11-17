@@ -64,3 +64,17 @@ export function placa(): ValidatorFn {
 		return /^[A-Z]{3}[0-9][A-Z0-9][0-9]{2}$/.test(normalizada) ? null : { placa: true };
 	};
 }
+
+/**
+ * Validador de grupo para os anos da moto: ano final exige o inicial e não pode ser menor que ele.
+ * Erros: `{ anoFinalSemInicial: true }` ou `{ anoFinalMenor: true }`.
+ */
+export function anosMoto(campoInicio = 'year_start', campoFim = 'year_end'): ValidatorFn {
+	return (grupo: AbstractControl): ValidationErrors | null => {
+		const inicio = grupo.get(campoInicio)?.value;
+		const fim = grupo.get(campoFim)?.value;
+		if (fim === null || fim === undefined || fim === '') return null;
+		if (inicio === null || inicio === undefined || inicio === '') return { anoFinalSemInicial: true };
+		return Number(fim) < Number(inicio) ? { anoFinalMenor: true } : null;
+	};
+}

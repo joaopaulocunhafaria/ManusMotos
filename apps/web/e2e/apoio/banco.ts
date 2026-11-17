@@ -1,5 +1,5 @@
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
-import type { Agendamento, Cliente, Database, Moto, OrdemServico, Servico } from '@manus/shared';
+import type { Agendamento, Cliente, Database, Moto, OrdemServico, Peca, PecaInsert, Servico } from '@manus/shared';
 import { environment } from '../../src/environments/environment.development';
 import { gerarCpf, gerarPlaca, gerarTelefone, unico } from './geradores';
 
@@ -21,7 +21,13 @@ export class Banco {
 		{ auth: { persistSession: false, autoRefreshToken: false } },
 	);
 
-	private ids = { ordens: new Set<string>(), clientes: new Set<string>(), servicos: new Set<string>(), agendamentos: new Set<string>() };
+	private ids = {
+		ordens: new Set<string>(),
+		clientes: new Set<string>(),
+		servicos: new Set<string>(),
+		agendamentos: new Set<string>(),
+		pecas: new Set<string>(),
+	};
 
 	/** Registra para limpeza registros criados pela própria tela. */
 	public registrar(tipo: keyof Banco['ids'], id: string): void {
@@ -115,9 +121,34 @@ export class Banco {
 		return linhas;
 	}
 
+	public async criarPeca(dados: Partial<PecaInsert> = {}): Promise<Peca> {
+		const { data, error } = await this.client
+			.from('parts')
+			.insert({ name: `Peça E2E ${unico()}`, purchase_price: 100, sale_price: 150, quantity: 1, ...dados })
+			.select()
+			.single();
+		if (error) throw error;
+		this.registrar('pecas', data.id);
+		return data;
+	}
+
+	public async peca(id: string): Promise<Peca | null> {
+		const { data, error } = await this.client.from('parts').select('*').eq('id', id).maybeSingle();
+		if (error) throw error;
+		return data;
+	}
+
+	/** Peças com o nome exato (registra para limpeza as criadas pela tela). */
+	public async pecasPorNome(nome: string): Promise<Peca[]> {
+		const { data, error } = await this.client.from('parts').select('*').eq('name', nome);
+		if (error) throw error;
+		data.forEach((linha) => this.registrar('pecas', linha.id));
+		return data;
+	}
+
 	/** Remove tudo que o teste criou (OS antes de clientes/serviços, por causa das FKs). */
 	public async limpar(): Promise<void> {
-		const apagar = async (tabela: 'service_orders' | 'clients' | 'services' | 'appointments', ids: Set<string>) => {
+		const apagar = async (tabela: 'service_orders' | 'clients' | 'services' | 'appointments' | 'parts', ids: Set<string>) => {
 			if (ids.size)
 				await this.admin
 					.from(tabela)
@@ -125,6 +156,7 @@ export class Banco {
 					.in('id', [...ids]);
 		};
 		await apagar('appointments', this.ids.agendamentos);
+		await apagar('parts', this.ids.pecas);
 		// OS criadas pela tela para os clientes do teste.
 		if (this.ids.clientes.size) {
 			const { data } = await this.admin

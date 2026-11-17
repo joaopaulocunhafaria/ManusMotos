@@ -106,6 +106,8 @@ export type Database = {
 					border_radius: string;
 					font_family: string;
 					id: number;
+					instagram: string | null;
+					logo: string | null;
 					phone: string | null;
 					primary_color: string;
 					secondary_color: string;
@@ -123,6 +125,8 @@ export type Database = {
 					border_radius?: string;
 					font_family?: string;
 					id?: number;
+					instagram?: string | null;
+					logo?: string | null;
 					phone?: string | null;
 					primary_color?: string;
 					secondary_color?: string;
@@ -139,6 +143,8 @@ export type Database = {
 					border_radius?: string;
 					font_family?: string;
 					id?: number;
+					instagram?: string | null;
+					logo?: string | null;
 					phone?: string | null;
 					primary_color?: string;
 					secondary_color?: string;
@@ -189,6 +195,49 @@ export type Database = {
 						referencedColumns: ['id'];
 					},
 				];
+			};
+			parts: {
+				Row: {
+					created_at: string;
+					id: string;
+					motorcycle_model: string | null;
+					name: string;
+					profit_margin: number | null;
+					purchase_price: number;
+					quantity: number;
+					sale_price: number;
+					updated_at: string;
+					year_end: number | null;
+					year_start: number | null;
+				};
+				ComputedFields: never;
+				Insert: {
+					created_at?: string;
+					id?: string;
+					motorcycle_model?: string | null;
+					name: string;
+					profit_margin?: never;
+					purchase_price?: number;
+					quantity?: number;
+					sale_price?: number;
+					updated_at?: string;
+					year_end?: number | null;
+					year_start?: number | null;
+				};
+				Update: {
+					created_at?: string;
+					id?: string;
+					motorcycle_model?: string | null;
+					name?: string;
+					profit_margin?: never;
+					purchase_price?: number;
+					quantity?: number;
+					sale_price?: number;
+					updated_at?: string;
+					year_end?: number | null;
+					year_start?: number | null;
+				};
+				Relationships: [];
 			};
 			service_order_items: {
 				Row: {
@@ -254,6 +303,9 @@ export type Database = {
 					status: string;
 					total: number;
 					updated_at: string;
+					work_estimate_minutes: number | null;
+					work_seconds: number;
+					work_started_at: string | null;
 				};
 				ComputedFields: never;
 				Insert: {
@@ -273,6 +325,9 @@ export type Database = {
 					status?: string;
 					total?: number;
 					updated_at?: string;
+					work_estimate_minutes?: number | null;
+					work_seconds?: number;
+					work_started_at?: string | null;
 				};
 				Update: {
 					client_id?: string;
@@ -291,6 +346,9 @@ export type Database = {
 					status?: string;
 					total?: number;
 					updated_at?: string;
+					work_estimate_minutes?: number | null;
+					work_seconds?: number;
+					work_started_at?: string | null;
 				};
 				Relationships: [
 					{
@@ -339,6 +397,58 @@ export type Database = {
 			[_ in never]: never;
 		};
 		Functions: {
+			adjust_part_quantity: {
+				Args: { p_delta: number; p_id: string };
+				Returns: {
+					created_at: string;
+					id: string;
+					motorcycle_model: string | null;
+					name: string;
+					profit_margin: number | null;
+					purchase_price: number;
+					quantity: number;
+					sale_price: number;
+					updated_at: string;
+					year_end: number | null;
+					year_start: number | null;
+				};
+				SetofOptions: {
+					from: '*';
+					to: 'parts';
+					isOneToOne: true;
+					isSetofReturn: false;
+				};
+			};
+			pause_service_order_timer: {
+				Args: { p_id: string };
+				Returns: {
+					client_id: string;
+					created_at: string;
+					customer_notes: string | null;
+					down_payment: number;
+					estimated_time: string | null;
+					id: string;
+					installments: number | null;
+					mileage: number | null;
+					motorcycle_id: string;
+					notes: string | null;
+					number: number;
+					order_date: string;
+					payment_method: string;
+					status: string;
+					total: number;
+					updated_at: string;
+					work_estimate_minutes: number | null;
+					work_seconds: number;
+					work_started_at: string | null;
+				};
+				SetofOptions: {
+					from: '*';
+					to: 'service_orders';
+					isOneToOne: true;
+					isSetofReturn: false;
+				};
+			};
 			save_client: { Args: { p_client: Json; p_id: string; p_motorcycles: Json; p_removed_motorcycles?: string[] }; Returns: string };
 			save_service_order: { Args: { p_items: Json; p_order: Json }; Returns: string };
 			search_clients: {
@@ -355,6 +465,28 @@ export type Database = {
 				SetofOptions: {
 					from: '*';
 					to: 'clients';
+					isOneToOne: false;
+					isSetofReturn: true;
+				};
+			};
+			search_parts: {
+				Args: { p_term?: string };
+				Returns: {
+					created_at: string;
+					id: string;
+					motorcycle_model: string | null;
+					name: string;
+					profit_margin: number | null;
+					purchase_price: number;
+					quantity: number;
+					sale_price: number;
+					updated_at: string;
+					year_end: number | null;
+					year_start: number | null;
+				}[];
+				SetofOptions: {
+					from: '*';
+					to: 'parts';
 					isOneToOne: false;
 					isSetofReturn: true;
 				};
@@ -378,12 +510,75 @@ export type Database = {
 					status: string;
 					total: number;
 					updated_at: string;
+					work_estimate_minutes: number | null;
+					work_seconds: number;
+					work_started_at: string | null;
 				}[];
 				SetofOptions: {
 					from: '*';
 					to: 'service_orders';
 					isOneToOne: false;
 					isSetofReturn: true;
+				};
+			};
+			set_service_order_work_time: {
+				Args: { p_id: string; p_seconds: number };
+				Returns: {
+					client_id: string;
+					created_at: string;
+					customer_notes: string | null;
+					down_payment: number;
+					estimated_time: string | null;
+					id: string;
+					installments: number | null;
+					mileage: number | null;
+					motorcycle_id: string;
+					notes: string | null;
+					number: number;
+					order_date: string;
+					payment_method: string;
+					status: string;
+					total: number;
+					updated_at: string;
+					work_estimate_minutes: number | null;
+					work_seconds: number;
+					work_started_at: string | null;
+				};
+				SetofOptions: {
+					from: '*';
+					to: 'service_orders';
+					isOneToOne: true;
+					isSetofReturn: false;
+				};
+			};
+			start_service_order_timer: {
+				Args: { p_id: string };
+				Returns: {
+					client_id: string;
+					created_at: string;
+					customer_notes: string | null;
+					down_payment: number;
+					estimated_time: string | null;
+					id: string;
+					installments: number | null;
+					mileage: number | null;
+					motorcycle_id: string;
+					notes: string | null;
+					number: number;
+					order_date: string;
+					payment_method: string;
+					status: string;
+					total: number;
+					updated_at: string;
+					work_estimate_minutes: number | null;
+					work_seconds: number;
+					work_started_at: string | null;
+				};
+				SetofOptions: {
+					from: '*';
+					to: 'service_orders';
+					isOneToOne: true;
+					isSetofReturn: false;
 				};
 			};
 		};

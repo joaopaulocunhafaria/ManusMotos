@@ -1,0 +1,149 @@
+<div class="mx-auto flex w-full max-w-xl flex-col gap-4">
+	<div class="flex items-center gap-2">
+		<p-button icon="pi pi-arrow-left" variant="text" styleClass="min-h-11 min-w-11" ariaLabel="Voltar" (onClick)="voltar()" />
+		<h1 class="m-0 text-xl font-semibold">{{ id ? 'Editar peça' : 'Nova peça' }}</h1>
+	</div>
+
+	<app-estado [modo]="estado()" mensagemErro="Não foi possível carregar a peça." (recarregar)="carregar()"></app-estado>
+
+	<form *ngIf="estado() === 'carregado'" [formGroup]="formulario" (ngSubmit)="salvar()" class="flex flex-col gap-4" novalidate>
+		<div class="flex flex-col gap-1">
+			<label for="peca-nome" class="text-sm font-medium">Nome da peça *</label>
+			<input pInputText id="peca-nome" formControlName="name" maxlength="120" autocomplete="off" class="min-h-11 w-full" />
+			<small *ngIf="invalido('name')" class="text-red-600">Informe o nome da peça (até 120 caracteres).</small>
+		</div>
+
+		<div class="flex flex-col gap-1">
+			<label for="peca-modelo" class="text-sm font-medium">Modelo da moto</label>
+			<input
+				pInputText
+				id="peca-modelo"
+				formControlName="motorcycle_model"
+				maxlength="80"
+				autocomplete="off"
+				placeholder="Ex.: CG 160 (vazio = qualquer moto)"
+				class="min-h-11 w-full"
+			/>
+			<small *ngIf="invalido('motorcycle_model')" class="text-red-600">Use até 80 caracteres.</small>
+		</div>
+
+		<fieldset class="m-0 flex flex-col gap-1 border-0 p-0">
+			<legend class="mb-1 p-0 text-sm font-medium">Ano da moto</legend>
+			<div class="grid grid-cols-2 gap-3">
+				<div class="flex min-w-0 flex-col gap-1">
+					<label for="peca-ano-inicio" class="text-xs text-gray-500">De</label>
+					<input
+						pInputText
+						id="peca-ano-inicio"
+						formControlName="year_start"
+						inputmode="numeric"
+						maxlength="4"
+						autocomplete="off"
+						placeholder="Ex.: 2015"
+						class="min-h-11 w-full"
+					/>
+				</div>
+				<div class="flex min-w-0 flex-col gap-1">
+					<label for="peca-ano-fim" class="text-xs text-gray-500">Até (opcional)</label>
+					<input
+						pInputText
+						id="peca-ano-fim"
+						formControlName="year_end"
+						inputmode="numeric"
+						maxlength="4"
+						autocomplete="off"
+						placeholder="Ex.: 2020"
+						class="min-h-11 w-full"
+					/>
+				</div>
+			</div>
+			<small *ngIf="invalido('year_start') || invalido('year_end')" class="text-red-600">
+				Informe o ano com 4 dígitos, entre {{ anoMinimo }} e {{ anoMaximo }}.
+			</small>
+			<small *ngIf="erroAnos('anoFinalSemInicial')" class="text-red-600">Informe o ano inicial.</small>
+			<small *ngIf="erroAnos('anoFinalMenor')" class="text-red-600">O ano final não pode ser antes do inicial.</small>
+		</fieldset>
+
+		<div class="grid grid-cols-2 gap-3">
+			<div class="flex min-w-0 flex-col gap-1">
+				<label for="peca-compra" class="text-sm font-medium">Valor de compra *</label>
+				<p-inputNumber
+					formControlName="purchase_price"
+					inputId="peca-compra"
+					mode="currency"
+					currency="BRL"
+					locale="pt-BR"
+					[min]="0"
+					[max]="valorMaximo"
+					[fluid]="true"
+					inputStyleClass="min-h-11"
+					placeholder="R$ 0,00"
+				/>
+				<small *ngIf="invalido('purchase_price')" class="text-red-600">Informe o valor de compra.</small>
+			</div>
+			<div class="flex min-w-0 flex-col gap-1">
+				<label for="peca-venda" class="text-sm font-medium">Valor de venda *</label>
+				<p-inputNumber
+					formControlName="sale_price"
+					inputId="peca-venda"
+					mode="currency"
+					currency="BRL"
+					locale="pt-BR"
+					[min]="0"
+					[max]="valorMaximo"
+					[fluid]="true"
+					inputStyleClass="min-h-11"
+					placeholder="R$ 0,00"
+				/>
+				<small *ngIf="invalido('sale_price')" class="text-red-600">Informe o valor de venda.</small>
+			</div>
+		</div>
+
+		<div
+			id="peca-margem"
+			class="rounded-lg border px-4 py-3"
+			[ngClass]="(margem() ?? 0) < 0 ? 'border-red-300 bg-red-50' : 'border-[var(--cor-borda)] bg-[var(--cor-superficie)]'"
+			aria-live="polite"
+		>
+			<ng-container *ngIf="margem() !== null; else semMargem">
+				<p class="m-0 text-base">
+					Margem de lucro:
+					<strong>{{ margem() | number: '1.0-1' }}%</strong>
+					<span class="text-sm text-gray-600">({{ lucro() | currency }} por peça)</span>
+				</p>
+				<p *ngIf="margem()! < 0" class="mt-1 mb-0 text-sm text-red-700">Atenção: o valor de venda está abaixo do valor de compra.</p>
+			</ng-container>
+			<ng-template #semMargem>
+				<p class="m-0 text-sm text-gray-500">Informe o valor de venda para ver a margem de lucro.</p>
+			</ng-template>
+		</div>
+
+		<div class="flex flex-col gap-1">
+			<label for="peca-quantidade" class="text-sm font-medium">Quantidade em estoque *</label>
+			<p-inputNumber
+				formControlName="quantity"
+				inputId="peca-quantidade"
+				[min]="0"
+				[max]="999999"
+				[useGrouping]="false"
+				[fluid]="true"
+				inputStyleClass="min-h-11"
+			/>
+			<small *ngIf="invalido('quantity')" class="text-red-600">Informe a quantidade (zero ou mais).</small>
+		</div>
+
+		<p-button type="submit" label="Salvar" icon="pi pi-check" styleClass="w-full min-h-11" [loading]="salvando()" />
+		<p-button
+			*ngIf="peca()"
+			label="Excluir peça"
+			icon="pi pi-trash"
+			variant="text"
+			severity="danger"
+			styleClass="w-full min-h-11"
+			[disabled]="salvando()"
+			(onClick)="confirmarExclusao()"
+		/>
+	</form>
+</div>
+
+<p-confirmDialog [style]="{ width: '100vw', maxWidth: '24rem' }" />
