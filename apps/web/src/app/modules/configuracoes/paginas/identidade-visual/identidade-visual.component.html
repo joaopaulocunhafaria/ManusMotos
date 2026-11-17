@@ -23,7 +23,8 @@
 				class="flex items-center justify-between border-b px-4 py-3"
 				[ngStyle]="{ 'background-color': previa().surface_color, 'border-color': previa().border_color }"
 			>
-				<span class="min-w-0 truncate text-lg font-bold" [ngStyle]="{ color: previa().primary_color }">
+				<img *ngIf="previa().logo" [src]="previa().logo" alt="" class="mr-3 h-8 w-auto max-w-[35%] shrink-0 object-contain" />
+				<span class="min-w-0 flex-1 truncate text-lg font-bold" [ngStyle]="{ color: previa().primary_color }">
 					{{ previa().shop_name || 'Nome da mecânica' }}
 				</span>
 				<i class="pi pi-sign-out" [ngStyle]="{ color: previa().secondary_color }"></i>
@@ -49,6 +50,56 @@
 					<label for="shop_name" class="text-sm font-medium">Título da mecânica *</label>
 					<input pInputText id="shop_name" formControlName="shop_name" maxlength="60" autocomplete="organization" class="w-full" />
 					<small *ngIf="invalido('shop_name')" class="text-red-600">Informe o título (até 60 caracteres).</small>
+				</div>
+
+				<div class="flex flex-col gap-2">
+					<span class="text-sm font-medium">Logo</span>
+					<div class="flex items-center gap-3">
+						<div
+							class="flex h-16 w-28 shrink-0 items-center justify-center overflow-hidden rounded-md border border-dashed border-[var(--cor-borda)] bg-white p-1"
+						>
+							<img
+								*ngIf="previa().logo; else semLogo"
+								[src]="previa().logo"
+								alt="Logo atual"
+								class="max-h-full max-w-full object-contain"
+							/>
+							<ng-template #semLogo><span class="text-xs text-gray-400">Sem logo</span></ng-template>
+						</div>
+						<div class="flex min-w-0 flex-1 flex-col gap-2">
+							<p-button
+								type="button"
+								[label]="previa().logo ? 'Trocar logo' : 'Escolher logo'"
+								icon="pi pi-image"
+								variant="outlined"
+								styleClass="w-full min-h-11"
+								[loading]="processandoLogo()"
+								(onClick)="escolherLogo()"
+							/>
+							<p-button
+								*ngIf="previa().logo"
+								type="button"
+								label="Remover logo"
+								icon="pi pi-trash"
+								variant="text"
+								severity="danger"
+								styleClass="w-full min-h-11"
+								(onClick)="removerLogo()"
+							/>
+						</div>
+					</div>
+					<input
+						#arquivoLogo
+						id="logo-arquivo"
+						type="file"
+						[accept]="tiposLogo"
+						class="sr-only"
+						aria-label="Arquivo do logo"
+						(change)="aoEscolherLogo($event)"
+					/>
+					<small class="text-gray-500">
+						PNG, JPG ou WebP. Aparece na ordem de serviço enviada ao cliente. Fundo transparente fica melhor.
+					</small>
 				</div>
 
 				<div class="flex flex-col gap-1">
@@ -86,6 +137,21 @@
 						class="w-full"
 					/>
 					<small *ngIf="invalido('whatsapp')" class="text-red-600">WhatsApp com DDD (10 ou 11 dígitos).</small>
+				</div>
+				<div class="flex flex-col gap-1">
+					<label for="instagram" class="text-sm font-medium">Instagram</label>
+					<input
+						pInputText
+						id="instagram"
+						formControlName="instagram"
+						maxlength="31"
+						autocapitalize="off"
+						autocomplete="off"
+						spellcheck="false"
+						placeholder="@suaoficina"
+						class="w-full"
+					/>
+					<small *ngIf="invalido('instagram')" class="text-red-600">Use só letras, números, ponto e _ (até 30).</small>
 				</div>
 			</div>
 		</p-card>

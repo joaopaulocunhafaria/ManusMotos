@@ -1,10 +1,11 @@
-import { Component, computed, OnDestroy, OnInit, signal } from '@angular/core';
+import { Component, computed, ElementRef, OnDestroy, OnInit, signal, ViewChild } from '@angular/core';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import type { DesignSettingsUpdate } from '@manus/shared';
 import { ConfirmationService, MessageService } from 'primeng/api';
 import { Subscription } from 'rxjs';
 import { TemaService } from '../../../../services/tema.service';
 import { corHex, telefone } from '../../../../utils/_formularios/validadores';
+import { reduzirImagem, TIPOS_IMAGEM_LOGO } from '../../../../utils/_metodos/imagem';
 import { mensagemErro } from '../../../../utils/_metodos/supabase';
 import {
 	contrasteWcag,
@@ -33,6 +34,9 @@ interface CorConfiguravel {
 	providers: [ConfirmationService],
 })
 export class IdentidadeVisualComponent implements OnInit, OnDestroy {
+	@ViewChild('arquivoLogo') private arquivoLogo?: ElementRef<HTMLInputElement>;
+
+	public readonly tiposLogo = TIPOS_IMAGEM_LOGO.join(',');
 	public readonly fontes = FONTES;
 	public readonly raios = RAIOS;
 	public readonly cores: CorConfiguravel[] = [
@@ -47,6 +51,7 @@ export class IdentidadeVisualComponent implements OnInit, OnDestroy {
 	public formulario: FormGroup;
 	public estado = signal<EstadoTela>('carregando');
 	public salvando = signal(false);
+	public processandoLogo = signal(false);
 	/** Valores atuais do formulário, para a pré-visualização ao vivo. */
 	public previa = signal<IdentidadeVisual>(IDENTIDADE_PADRAO);
 
@@ -75,6 +80,8 @@ export class IdentidadeVisualComponent implements OnInit, OnDestroy {
 			subtitle: ['', [Validators.maxLength(120)]],
 			phone: ['', [telefone()]],
 			whatsapp: ['', [telefone()]],
+			instagram: ['', [Validators.pattern(/^\s*@?[A-Za-z0-9._]{1,30}\s*$/)]],
+			logo: this.formBuilder.control<string | null>(null),
 			primary_color: cor(IDENTIDADE_PADRAO.primary_color),
 			secondary_color: cor(IDENTIDADE_PADRAO.secondary_color),
 			background_color: cor(IDENTIDADE_PADRAO.background_color),
@@ -135,11 +142,43 @@ export class IdentidadeVisualComponent implements OnInit, OnDestroy {
 			rejectLabel: 'Cancelar',
 			rejectButtonProps: { variant: 'outlined' },
 			accept: () => {
-				const { shop_name, subtitle, phone, whatsapp, ...visual } = IDENTIDADE_PADRAO;
+				const { shop_name, subtitle, phone, whatsapp, instagram, logo, ...visual } = IDENTIDADE_PADRAO;
 				this.formulario.patchValue(visual);
 				this.formulario.markAsDirty();
 			},
 		});
+	}
+
+	// ---------- Logo ----------
+
+	public escolherLogo(): void {
+		this.arquivoLogo?.nativeElement.click();
+	}
+
+	/** Reduz a imagem no aparelho e coloca no formulário (só grava ao salvar). */
+	public async aoEscolherLogo(evento: Event): Promise<void> {
+		const input = evento.target as HTMLInputElement;
+		const arquivo = input.files?.[0];
+		input.value = ''; // permite escolher o mesmo arquivo de novo
+		if (!arquivo) return;
+		this.processandoLogo.set(true);
+		try {
+			const logo = await reduzirImagem(arquivo);
+			this.formulario.patchValue({ logo });
+			this.formulario.markAsDirty();
+		} catch (erro) {
+			this.messageService.add({
+				severity: 'error',
+				summary: erro instanceof Error ? erro.message : 'Não foi possível usar esta imagem.',
+			});
+		} finally {
+			this.processandoLogo.set(false);
+		}
+	}
+
+	public removerLogo(): void {
+		this.formulario.patchValue({ logo: null });
+		this.formulario.markAsDirty();
 	}
 
 	public invalido(campo: string): boolean {
@@ -161,6 +200,7 @@ export class IdentidadeVisualComponent implements OnInit, OnDestroy {
 			subtitle: config.subtitle ?? '',
 			phone: config.phone ?? '',
 			whatsapp: config.whatsapp ?? '',
+			instagram: config.instagram ?? '',
 		});
 		this.previa.set(this.formulario.getRawValue());
 	}
@@ -173,6 +213,8 @@ export class IdentidadeVisualComponent implements OnInit, OnDestroy {
 			subtitle: textoOuNulo(valores.subtitle),
 			phone: textoOuNulo(valores.phone),
 			whatsapp: textoOuNulo(valores.whatsapp),
+			instagram: textoOuNulo((valores.instagram ?? '').trim().replace(/^@/, '')),
+			logo: valores.logo || null,
 			primary_color: valores.primary_color.toLowerCase(),
 			secondary_color: valores.secondary_color.toLowerCase(),
 			background_color: valores.background_color.toLowerCase(),

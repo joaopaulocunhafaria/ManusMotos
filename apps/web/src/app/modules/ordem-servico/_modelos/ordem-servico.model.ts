@@ -22,7 +22,10 @@ export interface DadosOrdemServico {
 	installments: number | null;
 	down_payment: number;
 	order_date: string;
+	/** Previsão de entrega enviada ao cliente. */
 	estimated_time: string | null;
+	/** Estimativa interna de trabalho ativo, em minutos. */
+	work_estimate_minutes: number | null;
 	notes: string | null;
 	customer_notes: string | null;
 }
@@ -32,3 +35,6 @@ export interface ItemFormulario {
 	servico: Pick<Servico, 'id' | 'name'> | null;
 	price: number | null;
 }
+
+/** Campos do cronômetro de trabalho devolvidos pelas RPCs. */
+export type CronometroOrdemServico = Pick<OrdemServico, 'work_seconds' | 'work_started_at' | 'work_estimate_minutes'>;

@@ -10,7 +10,7 @@ import {
 	test,
 	toast,
 } from './apoio/fixtures';
-import { gerarPlaca, unico } from './apoio/geradores';
+import { cpfFormatado, gerarPlaca, unico } from './apoio/geradores';
 
 /** Substitui APIs do navegador que abrem janelas do sistema (compartilhar, imprimir, nova aba) e registra as chamadas. */
 async function simularApisDoSistema(page: Page, opcoes: { compartilhar?: 'ok' | 'cancelar' | 'sem-suporte' } = {}): Promise<void> {
@@ -105,6 +105,8 @@ test.describe('Ordem de serviço: formulário', () => {
 		await expect(page.locator('dl').first()).toContainText('Restante');
 		await expect(page.locator('dl').first()).toContainText('R$ 150,00');
 		await page.locator('#os-prazo').fill('2 dias');
+		await page.locator('#os-estimativa-horas').fill('1');
+		await page.locator('#os-estimativa-minutos').fill('30');
 		await page.locator('#os-obs-cliente').fill('Peças inclusas.');
 		await page.locator('#os-obs').fill('Interno: barulho na corrente');
 		await esperarSemScrollHorizontal(page);
@@ -125,6 +127,9 @@ test.describe('Ordem de serviço: formulário', () => {
 			total: 200.5,
 			status: 'draft',
 			estimated_time: '2 dias',
+			work_estimate_minutes: 90,
+			work_seconds: 0,
+			work_started_at: null,
 			notes: 'Interno: barulho na corrente',
 			customer_notes: 'Peças inclusas.',
 		});
@@ -144,9 +149,12 @@ test.describe('Ordem de serviço: formulário', () => {
 			'23.500 km',
 			'3x de R$ 50,00',
 			'Interno: barulho na corrente',
+			'2 dias',
 		]) {
 			await expect(page.getByText(texto).first()).toBeVisible();
 		}
+		await expect(page.locator('#estimativa-trabalho')).toHaveText('1 h 30 min');
+		await expect(page.locator('#cronometro')).toHaveText('0:00:00');
 		await expect(page.getByRole('link', { name: /WhatsApp/ })).toHaveAttribute('href', `https://wa.me/55${cliente.phone}`);
 		await esperarSemScrollHorizontal(page);
 	});
@@ -351,7 +359,7 @@ test.describe('Ordem de serviço: detalhe, status e versão do cliente', () => {
 		expect((await banco.ordem(ordem.id)).status).toBe('completed');
 
 		// Concluída: sem próximos passos e sem "Cancelar OS".
-		await expect(page.getByRole('button', { name: /Cliente|Iniciar|Concluir|Reenviar|Marcar/ })).toHaveCount(0);
+		await expect(page.getByRole('button', { name: /Cliente|Iniciar serviço|Concluir|Reenviar|Marcar/ })).toHaveCount(0);
 		await page.getByRole('button', { name: 'Mais ações' }).click();
 		await expect(page.getByRole('menuitem', { name: 'Cancelar OS' })).toHaveCount(0);
 	});
@@ -416,15 +424,20 @@ test.describe('Ordem de serviço: detalhe, status e versão do cliente', () => {
 				notes: 'SEGREDO INTERNO',
 				customer_notes: 'Garantia de 90 dias.',
 				estimated_time: '3 dias',
+				work_estimate_minutes: 45,
 			},
 		);
+		await banco.client.rpc('set_service_order_work_time', { p_id: ordem.id, p_seconds: 3723 });
 		await page.goto(`/administracao/ordem-servico/${ordem.id}`);
 		await page.getByRole('button', { name: 'Versão do cliente' }).click();
 
 		const cartao = page.locator('app-os-cliente');
-		await expect(cartao).toContainText(`OS #${ordem.number}`);
+		await expect(cartao).toContainText('Ordem de serviço');
+		await expect(cartao).toContainText(String(ordem.number).padStart(6, '0'));
 		for (const texto of [
 			cliente.name,
+			cpfFormatado(cliente.document),
+			cliente.motorcycles[0].model,
 			servicos[0].name,
 			'R$ 300,00',
 			'Entrada',
@@ -438,8 +451,10 @@ test.describe('Ordem de serviço: detalhe, status e versão do cliente', () => {
 		const textoCartao = await cartao.innerText();
 		expect(textoCartao).not.toContain('SEGREDO INTERNO');
 		expect(textoCartao).not.toContain('Rua Secreta');
-		expect(textoCartao).not.toMatch(/\d{3}\.\d{3}\.\d{3}-\d{2}/);
 		expect(textoCartao).not.toContain('Rascunho');
+		expect(textoCartao, 'tempo de trabalho é interno').not.toContain('45 min');
+		expect(textoCartao, 'tempo gasto é interno').not.toContain('1:02:03');
+		await esperarSemScrollHorizontal(page);
 
 		const compartilhar = page.getByRole('button', { name: 'Compartilhar imagem' });
 		await expect(compartilhar).toBeEnabled({ timeout: 20_000 });
@@ -450,7 +465,7 @@ test.describe('Ordem de serviço: detalhe, status e versão do cliente', () => {
 					.__compartilhados,
 		);
 		expect(compartilhados).toHaveLength(1);
-		expect(compartilhados[0]).toMatchObject({ nome: `orcamento-os-${ordem.number}.png`, tipo: 'image/png' });
+		expect(compartilhados[0]).toMatchObject({ nome: `ordem-servico-${ordem.number}.png`, tipo: 'image/png' });
 		expect(compartilhados[0].assinatura, 'arquivo é um PNG de verdade').toEqual([137, 80, 78, 71, 13, 10, 26, 10]);
 		expect(compartilhados[0].tamanho).toBeGreaterThan(10_000);
 
@@ -481,7 +496,7 @@ test.describe('Ordem de serviço: detalhe, status e versão do cliente', () => {
 		await expect(page.getByRole('button', { name: 'Compartilhar imagem' })).toBeEnabled({ timeout: 20_000 });
 		const download = page.waitForEvent('download');
 		await page.getByRole('button', { name: 'Compartilhar imagem' }).click();
-		expect((await download).suggestedFilename()).toBe(`orcamento-os-${ordem.number}.png`);
+		expect((await download).suggestedFilename()).toBe(`ordem-servico-${ordem.number}.png`);
 	});
 
 	test('PDF: imprime só a versão do cliente', async ({ page, banco }) => {
@@ -494,7 +509,8 @@ test.describe('Ordem de serviço: detalhe, status e versão do cliente', () => {
 
 		const impressoes = await page.evaluate(() => (window as unknown as { __impressoes: string[] }).__impressoes);
 		expect(impressoes).toHaveLength(1);
-		expect(impressoes[0]).toContain(`OS #${ordem.number}`);
+		expect(impressoes[0]).toMatch(/ordem de serviço/i);
+		expect(impressoes[0]).toContain(String(ordem.number).padStart(6, '0'));
 		expect(impressoes[0]).not.toContain('SEGREDO INTERNO');
 
 		// Na mídia de impressão, só a área do cartão aparece.

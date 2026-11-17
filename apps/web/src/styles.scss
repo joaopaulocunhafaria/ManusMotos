@@ -37,6 +37,12 @@ textarea,
 	font-size: 16px;
 }
 
+/* Botão de fechar dos drawers do PrimeNG (40 px por padrão): alvo de toque de 44 px */
+.p-drawer [data-pc-section='closebutton'] > .p-button {
+	width: 2.75rem;
+	height: 2.75rem;
+}
+
 /* Altura de tela real no iPhone (barra do Safari), com fallback para iOS antigos */
 @utility tela-cheia {
 	min-height: 100vh;
@@ -64,9 +70,16 @@ textarea,
 		display: none !important;
 	}
 
+	/* O documento é desenhado para ~480 px: na folha A4 ele é ampliado para ocupar a largura útil. */
+	@page {
+		size: A4;
+		margin: 12mm;
+	}
+
 	.area-impressao {
 		display: block;
-		max-width: 24rem;
+		width: 128mm;
 		margin: 0 auto;
+		zoom: 1.45;
 	}
 }

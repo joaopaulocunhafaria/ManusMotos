@@ -249,8 +249,8 @@
 			</div>
 		</p-card>
 
-		<!-- Prazo e observações -->
-		<p-card header="Prazo e observações">
+		<!-- Prazos e observações -->
+		<p-card header="Prazos e observações">
 			<div class="flex flex-col gap-4">
 				<div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
 					<div class="flex min-w-0 flex-col gap-1">
@@ -259,17 +259,60 @@
 						<small *ngIf="invalido('order_date')" class="text-red-600">Informe a data.</small>
 					</div>
 					<div class="flex min-w-0 flex-col gap-1">
-						<label for="os-prazo" class="text-sm font-medium">Tempo estimado</label>
+						<label for="os-prazo" class="text-sm font-medium">Previsão de entrega</label>
 						<input
 							pInputText
 							id="os-prazo"
 							formControlName="estimated_time"
 							maxlength="80"
-							placeholder="Ex.: 2 dias, até sexta"
+							placeholder="Ex.: amanhã à tarde, 2 dias"
 							class="w-full"
 						/>
+						<small class="text-gray-500">Vai para o cliente.</small>
 					</div>
 				</div>
+
+				<fieldset class="m-0 flex min-w-0 flex-col gap-1 border-0 p-0">
+					<legend class="mb-1 p-0 text-sm font-medium">Tempo de trabalho estimado</legend>
+					<div class="grid grid-cols-2 gap-3">
+						<div class="flex min-w-0 items-center gap-2">
+							<input
+								pInputText
+								id="os-estimativa-horas"
+								type="number"
+								inputmode="numeric"
+								min="0"
+								max="100"
+								formControlName="estimativa_horas"
+								placeholder="0"
+								aria-label="Horas estimadas"
+								class="w-full min-w-0"
+							/>
+							<span class="shrink-0 text-sm text-gray-500">h</span>
+						</div>
+						<div class="flex min-w-0 items-center gap-2">
+							<input
+								pInputText
+								id="os-estimativa-minutos"
+								type="number"
+								inputmode="numeric"
+								min="0"
+								max="59"
+								formControlName="estimativa_minutos"
+								placeholder="30"
+								aria-label="Minutos estimados"
+								class="w-full min-w-0"
+							/>
+							<span class="shrink-0 text-sm text-gray-500">min</span>
+						</div>
+					</div>
+					<small *ngIf="estimativaInvalida(); else dicaEstimativa" class="text-red-600">
+						Use de 1 min a 100 h (minutos de 0 a 59).
+					</small>
+					<ng-template #dicaEstimativa>
+						<small class="text-gray-500">Só para a oficina: quanto tempo de mão de obra você espera gastar.</small>
+					</ng-template>
+				</fieldset>
 
 				<div class="flex flex-col gap-1">
 					<label for="os-obs-cliente" class="text-sm font-medium">Observação para o cliente</label>

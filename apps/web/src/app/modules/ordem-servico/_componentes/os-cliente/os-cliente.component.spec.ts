@@ -1,4 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { TemaService } from '../../../../services/tema.service';
+import { IDENTIDADE_PADRAO } from '../../../../utils/_metodos/tema';
 import { OrdemServicoDetalhada } from '../../_modelos/ordem-servico.model';
 import { OrdemServicoComponentesModule } from '../ordem-servico-componentes.module';
 import { OsClienteComponent } from './os-cliente.component';
@@ -19,6 +21,9 @@ describe('OsClienteComponent', () => {
 		total: 400,
 		order_date: '2026-11-16',
 		estimated_time: '2 dias',
+		work_estimate_minutes: 30,
+		work_seconds: 4321,
+		work_started_at: null,
 		notes: 'NOTA INTERNA SECRETA',
 		customer_notes: 'Peças inclusas.',
 		created_at: '',
@@ -38,16 +43,33 @@ describe('OsClienteComponent', () => {
 		],
 	};
 
+	const logo = 'data:image/png;base64,iVBORw0KGgo=';
+
 	beforeEach(async () => {
 		await TestBed.configureTestingModule({ imports: [OrdemServicoComponentesModule] }).compileComponents();
+		TestBed.inject(TemaService).config.set({
+			...IDENTIDADE_PADRAO,
+			shop_name: 'Oficina Teste',
+			whatsapp: '37999095330',
+			instagram: 'oficinateste',
+			logo,
+		});
 		fixture = TestBed.createComponent(OsClienteComponent);
 		fixture.componentInstance.ordem = ordem;
 		fixture.detectChanges();
 	});
 
-	it('mostra o resumo para o cliente', () => {
+	it('mostra o documento formal com cabeçalho da oficina, cliente, moto e serviços', () => {
 		const texto: string = fixture.nativeElement.textContent;
-		expect(texto).toContain('OS #7');
+		expect(texto).toContain('Ordem de serviço');
+		expect(texto).toContain('000007');
+		expect(texto).toContain('Oficina Teste');
+		expect(texto).toContain('(37) 99909-5330');
+		expect(texto).toContain('@oficinateste');
+		expect(texto).toContain('529.982.247-25');
+		expect(texto).toContain('ABC1D23');
+		expect(texto).toContain('Previsão de entrega');
+		expect(texto).toContain('2 dias');
 		expect(texto).toContain('Troca de óleo');
 		expect(texto).toContain('3x de');
 		expect(texto).toContain('Peças inclusas.');
@@ -56,8 +78,21 @@ describe('OsClienteComponent', () => {
 	it('não expõe dados internos', () => {
 		const texto: string = fixture.nativeElement.textContent;
 		expect(texto).not.toContain('NOTA INTERNA SECRETA');
-		expect(texto).not.toContain('529.982.247-25');
+		expect(texto).not.toContain('0:30');
+		expect(texto).not.toContain('1:12:01');
 		expect(texto).not.toContain('Rua X');
 		expect(texto).not.toContain('Rascunho');
+	});
+
+	it('mostra o logo da oficina', () => {
+		const imagem: HTMLImageElement | null = fixture.nativeElement.querySelector('img.doc-logo');
+		expect(imagem?.getAttribute('src')).toBe(logo);
+	});
+
+	it('sem logo, mostra só o nome da oficina', () => {
+		TestBed.inject(TemaService).config.set({ ...IDENTIDADE_PADRAO, shop_name: 'Sem Logo' });
+		fixture.detectChanges();
+		expect(fixture.nativeElement.querySelector('img.doc-logo')).toBeNull();
+		expect(fixture.nativeElement.textContent).toContain('Sem Logo');
 	});
 });

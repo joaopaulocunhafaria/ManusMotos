@@ -1,76 +1,149 @@
-<article
-	class="flex w-full flex-col gap-4 rounded-lg border border-solid p-4 text-sm"
-	style="
-		background-color: #ffffff;
-		color: #1f2937;
-		border-color: #e5e7eb;
-		font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-	"
->
-	<header class="flex flex-col gap-0.5 border-0 border-b border-solid pb-3" style="border-color: #e5e7eb">
-		<span class="text-lg font-bold" [style.color]="temaService.config().primary_color">{{ temaService.config().shop_name }}</span>
-		<span *ngIf="temaService.config().subtitle" class="text-xs" style="color: #6b7280">{{ temaService.config().subtitle }}</span>
-		<span *ngIf="temaService.config().whatsapp || temaService.config().phone" class="text-xs" style="color: #6b7280">
-			Contato: {{ temaService.config().whatsapp || temaService.config().phone | telefone }}
-		</span>
+<article class="doc-os">
+	<!-- Cabeçalho da oficina -->
+	<header class="doc-cabecalho">
+		<img *ngIf="oficina.logo" [src]="oficina.logo" alt="Logo {{ oficina.shop_name }}" class="doc-logo" width="120" height="64" />
+		<div class="doc-oficina" [class.doc-oficina-com-logo]="!!oficina.logo">
+			<span class="doc-oficina-nome">{{ oficina.shop_name }}</span>
+			<span *ngIf="oficina.subtitle" class="doc-oficina-linha">{{ oficina.subtitle }}</span>
+			<span *ngIf="oficina.whatsapp" class="doc-oficina-linha">WhatsApp: {{ oficina.whatsapp | telefone }}</span>
+			<span *ngIf="oficina.phone && oficina.phone !== oficina.whatsapp" class="doc-oficina-linha">
+				Telefone: {{ oficina.phone | telefone }}
+			</span>
+			<span *ngIf="oficina.instagram" class="doc-oficina-linha">Instagram: &#64;{{ oficina.instagram }}</span>
+		</div>
 	</header>
 
-	<div class="flex items-start justify-between gap-2">
-		<div class="flex flex-col">
-			<span class="text-base font-semibold">Orçamento · OS #{{ ordem.number }}</span>
-			<span class="text-xs" style="color: #6b7280">{{ ordem.order_date | date: 'dd/MM/yyyy' }}</span>
+	<!-- Título e número -->
+	<div class="doc-titulo">
+		<p class="doc-titulo-texto">Ordem de serviço</p>
+		<div class="doc-titulo-numero">
+			<span class="doc-rotulo">Nº</span>
+			<span class="doc-numero">{{ numero }}</span>
 		</div>
 	</div>
-
-	<section class="flex flex-col gap-0.5">
-		<span class="font-semibold">{{ ordem.clients.name }}</span>
-		<span>{{ ordem.motorcycles.model }} · {{ ordem.motorcycles.color }}</span>
+	<div class="doc-datas">
 		<span>
-			Placa {{ ordem.motorcycles.plate | placa }}
-			<ng-container *ngIf="ordem.mileage !== null">· {{ ordem.mileage | number }} km</ng-container>
+			Emissão:
+			<strong>{{ ordem.order_date | date: 'dd/MM/yyyy' }}</strong>
 		</span>
-	</section>
+		<span *ngIf="ordem.estimated_time">
+			Previsão de entrega:
+			<strong>{{ ordem.estimated_time }}</strong>
+		</span>
+	</div>
 
-	<section class="flex flex-col">
-		<span class="mb-1 text-xs font-semibold tracking-wide uppercase" style="color: #6b7280">Serviços</span>
-		<div
-			*ngFor="let item of ordem.service_order_items"
-			class="flex items-baseline justify-between gap-3 border-0 border-b border-dashed py-1.5"
-			style="border-color: #e5e7eb"
-		>
-			<span class="min-w-0">{{ item.service_name }}</span>
-			<span class="shrink-0 whitespace-nowrap">{{ item.price | currency }}</span>
-		</div>
-		<div class="flex items-baseline justify-between gap-3 pt-2 text-base font-bold">
-			<span>Total</span>
-			<span class="whitespace-nowrap">{{ ordem.total | currency }}</span>
-		</div>
-	</section>
-
-	<section class="flex flex-col gap-1 rounded-md p-3" style="background-color: #f3f4f6">
-		<div class="flex justify-between gap-3">
-			<span>Pagamento</span>
-			<span class="font-medium">{{ formaPagamento }}</span>
-		</div>
-		<div *ngIf="ordem.down_payment > 0" class="flex justify-between gap-3">
-			<span>Entrada</span>
-			<span class="font-medium whitespace-nowrap">{{ ordem.down_payment | currency }}</span>
-		</div>
-		<div *ngIf="ordem.payment_method === 'installments' && ordem.installments" class="flex justify-between gap-3">
-			<span>Parcelas</span>
-			<span class="font-medium whitespace-nowrap">{{ ordem.installments }}x de {{ parcela | currency }}</span>
-		</div>
-		<div *ngIf="ordem.down_payment > 0 && ordem.payment_method !== 'installments'" class="flex justify-between gap-3">
-			<span>Restante</span>
-			<span class="font-medium whitespace-nowrap">{{ saldo | currency }}</span>
-		</div>
-		<div *ngIf="ordem.estimated_time" class="flex justify-between gap-3">
-			<span>Prazo estimado</span>
-			<span class="text-right font-medium">{{ ordem.estimated_time }}</span>
+	<!-- Cliente -->
+	<section class="doc-secao">
+		<h2 class="doc-secao-titulo">Dados do cliente</h2>
+		<div class="doc-campos">
+			<div class="doc-campo col-span-2">
+				<span class="doc-rotulo">Nome</span>
+				<span class="doc-valor">{{ ordem.clients.name }}</span>
+			</div>
+			<div class="doc-campo">
+				<span class="doc-rotulo">Telefone</span>
+				<span class="doc-valor">{{ ordem.clients.phone | telefone }}</span>
+			</div>
+			<div class="doc-campo">
+				<span class="doc-rotulo">CPF / CNPJ</span>
+				<span class="doc-valor">{{ ordem.clients.document | documento }}</span>
+			</div>
 		</div>
 	</section>
 
-	<p *ngIf="ordem.customer_notes" class="m-0 whitespace-pre-line">{{ ordem.customer_notes }}</p>
+	<!-- Veículo -->
+	<section class="doc-secao">
+		<h2 class="doc-secao-titulo">Dados do veículo</h2>
+		<div class="doc-campos">
+			<div class="doc-campo">
+				<span class="doc-rotulo">Moto</span>
+				<span class="doc-valor">{{ ordem.motorcycles.model }}</span>
+			</div>
+			<div class="doc-campo">
+				<span class="doc-rotulo">Cor</span>
+				<span class="doc-valor">{{ ordem.motorcycles.color }}</span>
+			</div>
+			<div class="doc-campo">
+				<span class="doc-rotulo">Placa</span>
+				<span class="doc-valor">{{ ordem.motorcycles.plate | placa }}</span>
+			</div>
+			<div class="doc-campo">
+				<span class="doc-rotulo">KM</span>
+				<span class="doc-valor">{{ ordem.mileage !== null ? (ordem.mileage | number) : '—' }}</span>
+			</div>
+		</div>
+	</section>
 
-	<footer class="text-center text-xs" style="color: #6b7280">Responda esta mensagem para aprovar ou recusar o orçamento.</footer>
+	<!-- Serviços -->
+	<section class="doc-secao">
+		<h2 class="doc-secao-titulo">Serviços</h2>
+		<table class="doc-tabela">
+			<thead>
+				<tr>
+					<th class="doc-col-item">Item</th>
+					<th class="text-left">Descrição do serviço</th>
+					<th class="doc-col-valor">Valor</th>
+				</tr>
+			</thead>
+			<tbody>
+				<tr *ngFor="let item of ordem.service_order_items; let i = index">
+					<td class="doc-col-item">{{ i + 1 }}</td>
+					<td>{{ item.service_name }}</td>
+					<td class="doc-col-valor">{{ item.price | currency }}</td>
+				</tr>
+			</tbody>
+		</table>
+	</section>
+
+	<!-- Pagamento e total -->
+	<section class="doc-secao">
+		<h2 class="doc-secao-titulo">Condições de pagamento</h2>
+		<div class="doc-pagamento">
+			<dl class="doc-pagamento-linhas">
+				<div>
+					<dt>Forma</dt>
+					<dd>{{ formaPagamento }}</dd>
+				</div>
+				<div *ngIf="ordem.down_payment > 0">
+					<dt>Entrada</dt>
+					<dd>{{ ordem.down_payment | currency }}</dd>
+				</div>
+				<div *ngIf="ordem.payment_method === 'installments' && ordem.installments">
+					<dt>Parcelas</dt>
+					<dd>{{ ordem.installments }}x de {{ parcela | currency }}</dd>
+				</div>
+				<div *ngIf="ordem.down_payment > 0 && ordem.payment_method !== 'installments'">
+					<dt>Restante</dt>
+					<dd>{{ saldo | currency }}</dd>
+				</div>
+			</dl>
+			<div class="doc-total">
+				<span class="doc-total-rotulo">Total</span>
+				<span class="doc-total-valor">{{ ordem.total | currency }}</span>
+			</div>
+		</div>
+	</section>
+
+	<!-- Observações -->
+	<section *ngIf="ordem.customer_notes" class="doc-secao">
+		<h2 class="doc-secao-titulo">Observações</h2>
+		<p class="doc-observacoes">{{ ordem.customer_notes }}</p>
+	</section>
+
+	<!-- Autorização -->
+	<section class="doc-autorizacao">
+		<p class="m-0">Autorizo a execução dos serviços descritos nesta ordem de serviço, nos valores e condições acima.</p>
+		<div class="doc-assinaturas">
+			<div class="doc-assinatura">
+				<span class="doc-assinatura-linha"></span>
+				<span>Cliente</span>
+			</div>
+			<div class="doc-assinatura">
+				<span class="doc-assinatura-linha"></span>
+				<span>{{ oficina.shop_name }}</span>
+			</div>
+		</div>
+	</section>
+
+	<footer class="doc-rodape">Para aprovar ou tirar dúvidas, responda a esta mensagem.</footer>
 </article>

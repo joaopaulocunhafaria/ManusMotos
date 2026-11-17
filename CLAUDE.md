@@ -73,7 +73,7 @@ npm run build:vercel      # build do deploy (Vercel): valida que environment.ts 
 npm test                  # Karma (watch)  |  npm run test:ci -w @manus/web (headless)
 npm run e2e               # Playwright: ponta a ponta no iPhone 8 (WebKit) contra o Supabase local
 npm run db:test           # pgTAP: regras do banco (supabase/tests/database)
-npm run test:tudo         # typecheck + Karma + pgTAP + E2E (critério de aceite)
+npm run test:tudo         # typecheck + Karma + pgTAP + E2E (suíte inteira: só quando pedido, veja "Quais testes rodar")
 npm run typecheck         # app + testes E2E
 npm run format            # Prettier (também roda no pre-commit via husky + lint-staged)
 npm run db:migration <nome> && npm run db:reset && npm run db:types
@@ -201,6 +201,33 @@ Cada funcionalidade precisa de testes para:
 | Regras do banco                      | pgTAP (`supabase test db`)            | `supabase/tests/database/NN_<dominio>.test.sql` | `npm run db:test`               |
 | Funções puras e componentes isolados | Karma + Jasmine                       | `*.spec.ts` ao lado do arquivo                  | `npm run test:ci -w @manus/web` |
 
+**Quais testes rodar: só os da mudança**
+
+Ao alterar o sistema, **rode apenas os testes relacionados ao que foi implementado/alterado**, não a suíte inteira. A suíte completa
+(`npm run test:tudo`) só roda quando o usuário pedir explicitamente.
+
+```bash
+# E2E: só os specs dos domínios afetados (pode passar vários arquivos)
+npm run e2e -- e2e/estoque.spec.ts e2e/navegacao.spec.ts
+npm run e2e -- e2e/estoque.spec.ts -g "quantidade"          # filtra por nome do teste
+# pgTAP: só os arquivos do domínio (+ 00_seguranca se criou/alterou tabela ou função)
+npx supabase test db supabase/tests/database/00_seguranca.test.sql supabase/tests/database/50_estoque.test.sql
+# Karma: só os specs da pasta/arquivo alterado
+npm run test:ci -w @manus/web -- --include src/app/modules/estoque
+# Typecheck é rápido e pega quebras em outros lugares: rode sempre
+npm run typecheck
+```
+
+Como escolher:
+
+- **Domínio alterado** (`modules/<dominio>/`): o `e2e/<dominio>.spec.ts`, o `NN_<dominio>.test.sql` e os `*.spec.ts` da pasta.
+- **Migration nova ou alterada**: `db:reset`, mais o pgTAP do domínio e o `00_seguranca.test.sql`.
+- **Código compartilhado** (layout/`BaseComponent`, rotas, `components/`, `utils/`, `services/`, `styles.scss`, `@manus/shared`,
+  `e2e/apoio/`): rode também os specs de quem usa o que mudou (procure os usos com `grep`). Mudou a navegação ou o layout: inclua
+  `e2e/navegacao.spec.ts`.
+- Se um domínio usa outro (ex.: a OS usa clientes e serviços), rode os specs dos dois.
+- Na dúvida sobre o alcance, rode os specs dos domínios que importam o arquivo alterado, não a suíte inteira.
+
 **Como escrever os E2E** (`apps/web/e2e/`)
 
 - Importe `test`/`expect` de `./apoio/fixtures` (não de `@playwright/test`): a fixture `banco` cria dados e **apaga tudo ao final** do
@@ -241,7 +268,8 @@ explícita e `search_path` fixo.
 ## Checklist antes de concluir uma tarefa
 
 1. **Testes de ponta a ponta escritos para tudo o que foi desenvolvido** (rota padrão, caminho feliz e um teste por caso de borda, veja a
-   seção acima) e **`npm run test:tudo` passando** (typecheck + Karma + pgTAP + E2E). É critério de aceite: sem isso, não está pronto.
+   seção acima) e **os testes relacionados à mudança passando** (`npm run typecheck` + os E2E, pgTAP e Karma dos domínios afetados, veja
+   "Quais testes rodar"). É critério de aceite: sem isso, não está pronto. `npm run test:tudo` só quando o usuário pedir.
 2. `npm run build` passando.
 3. Tela conferida em **375 × 667**: sem scroll horizontal, alvos de toque ≥ 44 px, inputs ≥ 16 px (os E2E também checam).
 4. Nova tabela/função? Migration com RLS + grants mínimos, testes pgTAP e `npm run db:types`.

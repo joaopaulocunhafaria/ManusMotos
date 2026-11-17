@@ -12,7 +12,15 @@ import { ClienteComMotos } from '../../../clientes/_modelos/cliente.model';
 import { ClientesService } from '../../../clientes/_servicos/clientes.service';
 import { ServicosService } from '../../../servicos/_servicos/servicos.service';
 import { MAXIMO_PARCELAS, OPCOES_FORMA_PAGAMENTO } from '../../_enums/ordem-servico.enums';
-import { calcularTotal, hojeIso, saldoRestante, valorParcela } from '../../_metodos/ordem-servico';
+import {
+	calcularTotal,
+	hojeIso,
+	juntarHorasMinutos,
+	MAXIMO_ESTIMATIVA_MINUTOS,
+	saldoRestante,
+	separarHorasMinutos,
+	valorParcela,
+} from '../../_metodos/ordem-servico';
 import { DadosOrdemServico, ItemFormulario, OrdemServicoDetalhada } from '../../_modelos/ordem-servico.model';
 import { OrdemServicoService } from '../../_servicos/ordem-servico.service';
 
@@ -27,6 +35,14 @@ function validarPagamento(): ValidatorFn {
 		if (entrada > calcularTotal(itens)) erros['entradaMaiorQueTotal'] = true;
 		if (grupo.get('payment_method')?.value === 'installments' && !grupo.get('installments')?.value) erros['parcelasObrigatorias'] = true;
 		return Object.keys(erros).length ? erros : null;
+	};
+}
+
+/** Estimativa de trabalho: vazia ou entre 1 min e o máximo do banco (100 h). */
+function validarEstimativa(): ValidatorFn {
+	return (grupo: AbstractControl): ValidationErrors | null => {
+		const minutos = juntarHorasMinutos(grupo.get('estimativa_horas')?.value, grupo.get('estimativa_minutos')?.value);
+		return minutos !== null && (minutos < 1 || minutos > MAXIMO_ESTIMATIVA_MINUTOS) ? { estimativaInvalida: true } : null;
 	};
 }
 
@@ -96,10 +112,12 @@ export class FormularioOrdemServicoComponent implements OnInit, OnDestroy {
 				down_payment: this.formBuilder.control<number | null>(null, [Validators.min(0)]),
 				order_date: this.formBuilder.nonNullable.control(hojeIso(), [Validators.required]),
 				estimated_time: this.formBuilder.nonNullable.control('', [Validators.maxLength(80)]),
+				estimativa_horas: this.formBuilder.control<number | null>(null, [Validators.min(0), Validators.max(100)]),
+				estimativa_minutos: this.formBuilder.control<number | null>(null, [Validators.min(0), Validators.max(59)]),
 				notes: this.formBuilder.nonNullable.control('', [Validators.maxLength(2000)]),
 				customer_notes: this.formBuilder.nonNullable.control('', [Validators.maxLength(2000)]),
 			},
-			{ validators: [validarPagamento()] },
+			{ validators: [validarPagamento(), validarEstimativa()] },
 		);
 		this.formularioServico = this.formBuilder.nonNullable.group({
 			name: ['', [Validators.required, Validators.maxLength(100), Validators.pattern(/\S/)]],
@@ -254,6 +272,7 @@ export class FormularioOrdemServicoComponent implements OnInit, OnDestroy {
 			down_payment: Number(valores.down_payment) || 0,
 			order_date: valores.order_date,
 			estimated_time: textoOuNulo(valores.estimated_time),
+			work_estimate_minutes: juntarHorasMinutos(valores.estimativa_horas, valores.estimativa_minutos),
 			notes: textoOuNulo(valores.notes),
 			customer_notes: textoOuNulo(valores.customer_notes),
 		};
@@ -292,6 +311,14 @@ export class FormularioOrdemServicoComponent implements OnInit, OnDestroy {
 		return campoInvalido(grupo.get(campo));
 	}
 
+	/** Estimativa de trabalho com horas/minutos fora da faixa ou total zerado. */
+	public estimativaInvalida(): boolean {
+		const horas = this.formulario.get('estimativa_horas')!;
+		const minutos = this.formulario.get('estimativa_minutos')!;
+		const tocado = horas.touched || horas.dirty || minutos.touched || minutos.dirty;
+		return tocado && (horas.invalid || minutos.invalid || !!this.formulario.errors?.['estimativaInvalida']);
+	}
+
 	public erroGrupo(erro: 'entradaMaiorQueTotal' | 'parcelasObrigatorias', campo: string): boolean {
 		const controle = this.formulario.get(campo);
 		return !!this.formulario.errors?.[erro] && !!controle && (controle.touched || controle.dirty);
@@ -320,6 +347,8 @@ export class FormularioOrdemServicoComponent implements OnInit, OnDestroy {
 			down_payment: ordem.down_payment || null,
 			order_date: ordem.order_date,
 			estimated_time: ordem.estimated_time ?? '',
+			estimativa_horas: separarHorasMinutos(ordem.work_estimate_minutes).horas,
+			estimativa_minutos: separarHorasMinutos(ordem.work_estimate_minutes).minutos,
 			notes: ordem.notes ?? '',
 			customer_notes: ordem.customer_notes ?? '',
 		});
@@ -340,7 +369,16 @@ export class FormularioOrdemServicoComponent implements OnInit, OnDestroy {
 		if (!this.itens.length) return 'Adicione ao menos um serviço.';
 		if (this.formulario.errors?.['entradaMaiorQueTotal']) return 'A entrada não pode ser maior que o total.';
 		if (this.formulario.errors?.['parcelasObrigatorias']) return 'Escolha a quantidade de parcelas.';
+		if (this.estimativaInvalidaNoFormulario()) return 'Confira o tempo de trabalho estimado.';
 		return 'Confira os campos destacados.';
+	}
+
+	private estimativaInvalidaNoFormulario(): boolean {
+		return (
+			!!this.formulario.errors?.['estimativaInvalida'] ||
+			this.formulario.get('estimativa_horas')!.invalid ||
+			this.formulario.get('estimativa_minutos')!.invalid
+		);
 	}
 
 	/** O autocomplete guarda texto enquanto o usuário digita: só vale um cliente escolhido da lista. */

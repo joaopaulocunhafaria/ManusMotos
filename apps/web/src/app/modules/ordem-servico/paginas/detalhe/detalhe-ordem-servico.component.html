@@ -37,6 +37,75 @@
 			/>
 		</div>
 
+		<!-- Tempo de trabalho (interno) -->
+		<p-card header="Tempo de trabalho">
+			<div class="flex flex-col gap-3">
+				<div class="flex items-end justify-between gap-3">
+					<div class="flex min-w-0 flex-col">
+						<span class="flex items-center gap-1.5 text-xs text-gray-500">
+							<span
+								class="inline-block h-2 w-2 rounded-full"
+								[ngClass]="cronometroLigado() ? 'animate-pulse bg-green-600' : 'bg-gray-400'"
+								aria-hidden="true"
+							></span>
+							{{ cronometroLigado() ? 'Em execução' : 'Pausado' }}
+						</span>
+						<span id="cronometro" class="font-mono text-3xl font-semibold tabular-nums" role="timer" aria-label="Tempo gasto">
+							{{ cronometro() }}
+						</span>
+					</div>
+					<div class="flex shrink-0 flex-col text-right">
+						<span class="text-xs text-gray-500">Estimado</span>
+						<span id="estimativa-trabalho" class="text-base font-medium">{{ estimativa() || 'Não informado' }}</span>
+					</div>
+				</div>
+
+				<div *ngIf="progresso() !== null" class="flex flex-col gap-1">
+					<div
+						class="h-2 w-full overflow-hidden rounded-full bg-gray-200"
+						role="progressbar"
+						aria-label="Tempo gasto sobre o estimado"
+						[attr.aria-valuenow]="progresso()"
+						aria-valuemin="0"
+						aria-valuemax="100"
+					>
+						<div
+							class="h-full rounded-full"
+							[ngClass]="progresso()! > 100 ? 'bg-red-600' : 'bg-[var(--cor-primaria)]'"
+							[style.width.%]="progresso()! > 100 ? 100 : progresso()"
+						></div>
+					</div>
+					<span class="text-xs" [ngClass]="progresso()! > 100 ? 'font-medium text-red-700' : 'text-gray-500'">
+						{{ progresso() }}% do estimado{{ progresso()! > 100 ? ' (passou da estimativa)' : '' }}
+					</span>
+				</div>
+
+				<div class="grid grid-cols-2 gap-2">
+					<p-button
+						[label]="cronometroLigado() ? 'Pausar' : tempoGasto() > 0 ? 'Continuar' : 'Iniciar'"
+						[icon]="cronometroLigado() ? 'pi pi-pause' : 'pi pi-play'"
+						[severity]="cronometroLigado() ? 'warn' : 'success'"
+						styleClass="w-full min-h-11"
+						[loading]="salvandoCronometro()"
+						[disabled]="!cronometroLigado() && !podeLigarCronometro()"
+						(onClick)="alternarCronometro()"
+					/>
+					<p-button
+						label="Ajustar"
+						icon="pi pi-pencil"
+						variant="outlined"
+						severity="secondary"
+						styleClass="w-full min-h-11"
+						ariaLabel="Ajustar tempo gasto"
+						(onClick)="abrirAjuste()"
+					/>
+				</div>
+				<small *ngIf="!podeLigarCronometro()" class="text-gray-500">
+					OS {{ labelStatus[status()].toLowerCase() }}: o cronômetro fica parado. Use "Ajustar" para corrigir o tempo.
+				</small>
+			</div>
+		</p-card>
+
 		<p-card header="Cliente">
 			<dl class="m-0 flex flex-col gap-2 text-sm">
 				<div>
@@ -108,7 +177,7 @@
 			</div>
 		</p-card>
 
-		<p-card header="Pagamento e prazo">
+		<p-card header="Pagamento e entrega">
 			<dl class="m-0 flex flex-col gap-2 text-sm">
 				<div class="flex justify-between gap-3">
 					<dt class="text-gray-500">Forma</dt>
@@ -127,7 +196,7 @@
 					<dd class="m-0 font-medium">{{ ordem.installments }}x de {{ parcela() | currency }}</dd>
 				</div>
 				<div class="flex justify-between gap-3">
-					<dt class="text-gray-500">Tempo estimado</dt>
+					<dt class="text-gray-500">Previsão de entrega</dt>
 					<dd class="m-0 text-right font-medium">{{ ordem.estimated_time || '—' }}</dd>
 				</div>
 			</dl>
@@ -187,8 +256,62 @@
 			styleClass="w-full min-h-11"
 			(onClick)="abrirWhatsapp()"
 		/>
-		<p class="m-0 text-center text-xs text-gray-500">Sem CPF/CNPJ, endereço, observação interna e status.</p>
+		<p class="m-0 text-center text-xs text-gray-500">Sem endereço, observação interna, tempo de trabalho e status.</p>
 	</div>
+</p-drawer>
+
+<!-- Ajuste manual do tempo de trabalho -->
+<p-drawer
+	[visible]="ajusteAberto()"
+	(visibleChange)="ajusteAberto.set($event)"
+	position="bottom"
+	header="Ajustar tempo gasto"
+	styleClass="!h-auto rounded-t-2xl"
+>
+	<form [formGroup]="formularioAjuste" (ngSubmit)="salvarAjuste()" class="area-segura-base flex flex-col gap-4">
+		<p class="m-0 text-sm text-gray-500">
+			Informe o tempo total de trabalho nesta OS. Se o cronômetro estiver ligado, ele continua a partir daqui.
+		</p>
+		<div class="grid grid-cols-2 gap-3">
+			<div class="flex min-w-0 flex-col gap-1">
+				<label for="ajuste-horas" class="text-sm font-medium">Horas</label>
+				<input
+					pInputText
+					id="ajuste-horas"
+					type="number"
+					inputmode="numeric"
+					min="0"
+					max="1000"
+					formControlName="horas"
+					class="w-full min-w-0"
+				/>
+				<small *ngIf="ajusteInvalido('horas')" class="text-red-600">De 0 a 1000.</small>
+			</div>
+			<div class="flex min-w-0 flex-col gap-1">
+				<label for="ajuste-minutos" class="text-sm font-medium">Minutos</label>
+				<input
+					pInputText
+					id="ajuste-minutos"
+					type="number"
+					inputmode="numeric"
+					min="0"
+					max="59"
+					formControlName="minutos"
+					class="w-full min-w-0"
+				/>
+				<small *ngIf="ajusteInvalido('minutos')" class="text-red-600">De 0 a 59.</small>
+			</div>
+		</div>
+		<p-button type="submit" label="Salvar tempo" icon="pi pi-check" styleClass="w-full min-h-11" [loading]="salvandoAjuste()" />
+		<p-button
+			type="button"
+			label="Cancelar"
+			variant="text"
+			severity="secondary"
+			styleClass="w-full min-h-11"
+			(onClick)="ajusteAberto.set(false)"
+		/>
+	</form>
 </p-drawer>
 
 <p-confirmDialog [style]="{ width: '100vw', maxWidth: '24rem' }" />

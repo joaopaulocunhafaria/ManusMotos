@@ -3,7 +3,13 @@
 	class="flex min-h-14 w-full flex-col gap-2 rounded-lg border border-[var(--cor-borda)] bg-[var(--cor-superficie)] px-4 py-3 text-[var(--cor-texto)] no-underline"
 >
 	<div class="flex items-center justify-between gap-2">
-		<span class="text-sm font-semibold text-[var(--cor-primaria)]">OS #{{ ordem.number }}</span>
+		<span class="flex min-w-0 items-center gap-2">
+			<span class="text-sm font-semibold text-[var(--cor-primaria)]">OS #{{ ordem.number }}</span>
+			<span *ngIf="ordem.work_started_at" class="inline-flex items-center gap-1 text-xs font-medium text-green-700">
+				<i class="pi pi-stopwatch text-xs" aria-hidden="true"></i>
+				Em execução
+			</span>
+		</span>
 		<p-tag [value]="labelStatus[status]" [severity]="severidadeStatus[status]" />
 	</div>
 	<div class="flex items-end justify-between gap-3">

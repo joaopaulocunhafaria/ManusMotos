@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import type { Json, StatusOrdemServico } from '@manus/shared';
+import type { Json, OrdemServico, StatusOrdemServico } from '@manus/shared';
 import { Observable } from 'rxjs';
 import { SupabaseService } from '../../../services/supabase.service';
 import { intervaloPagina } from '../../../utils/_constantes/paginacao';
@@ -53,6 +53,23 @@ export class OrdemServicoService {
 
 	public atualizarStatus(id: string, status: StatusOrdemServico): Observable<null> {
 		return deSupabase(this.supabaseService.client.from('service_orders').update({ status }).eq('id', id));
+	}
+
+	// ---------- Cronômetro de trabalho (relógio do banco) ----------
+
+	/** Liga o cronômetro (sem efeito se já estiver ligado). */
+	public iniciarCronometro(id: string): Observable<OrdemServico> {
+		return deSupabase<OrdemServico>(this.supabaseService.client.rpc('start_service_order_timer', { p_id: id }));
+	}
+
+	/** Pausa o cronômetro somando o trecho em andamento ao acumulado. */
+	public pausarCronometro(id: string): Observable<OrdemServico> {
+		return deSupabase<OrdemServico>(this.supabaseService.client.rpc('pause_service_order_timer', { p_id: id }));
+	}
+
+	/** Corrige manualmente o tempo gasto (em segundos). Se estiver rodando, continua a partir dele. */
+	public ajustarTempo(id: string, segundos: number): Observable<OrdemServico> {
+		return deSupabase<OrdemServico>(this.supabaseService.client.rpc('set_service_order_work_time', { p_id: id, p_seconds: segundos }));
 	}
 
 	public excluir(id: string): Observable<null> {

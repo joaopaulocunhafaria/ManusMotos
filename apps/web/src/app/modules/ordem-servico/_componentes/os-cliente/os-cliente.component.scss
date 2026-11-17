@@ -1,0 +1,323 @@
+// Documento formal da OS enviado ao cliente (PNG e PDF).
+// Só cores fixas e fonte do sistema: a captura em imagem precisa sair igual em qualquer aparelho e tema.
+$tinta: #111827;
+$texto: #1f2937;
+$suave: #6b7280;
+$linha: #d1d5db;
+$fundo-suave: #f3f4f6;
+
+.doc-os {
+	display: flex;
+	flex-direction: column;
+	gap: 12px;
+	width: 100%;
+	box-sizing: border-box;
+	padding: 16px;
+	background: #ffffff;
+	color: $texto;
+	border: 1px solid $linha;
+	font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+	font-size: 12px;
+	line-height: 1.35;
+	-webkit-print-color-adjust: exact;
+	print-color-adjust: exact;
+}
+
+// ---------- Cabeçalho ----------
+.doc-cabecalho {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+	padding-bottom: 10px;
+	border-bottom: 2px solid $tinta;
+}
+
+.doc-logo {
+	flex-shrink: 0;
+	width: auto;
+	max-width: 42%;
+	height: 64px;
+	object-fit: contain;
+}
+
+.doc-oficina {
+	display: flex;
+	flex: 1;
+	flex-direction: column;
+	gap: 1px;
+	min-width: 0;
+}
+
+.doc-oficina-com-logo {
+	align-items: flex-end;
+	text-align: right;
+}
+
+.doc-oficina-nome {
+	color: $tinta;
+	font-size: 15px;
+	font-weight: 800;
+	letter-spacing: 0.04em;
+	text-transform: uppercase;
+	overflow-wrap: anywhere;
+}
+
+.doc-oficina-linha {
+	color: $suave;
+	font-size: 10.5px;
+	overflow-wrap: anywhere;
+}
+
+// ---------- Título ----------
+.doc-titulo {
+	display: flex;
+	align-items: stretch;
+	border: 1.5px solid $tinta;
+	border-radius: 4px;
+	overflow: hidden;
+}
+
+.doc-titulo-texto {
+	display: flex;
+	flex: 1;
+	align-items: center;
+	margin: 0;
+	padding: 8px 12px;
+	background: $tinta;
+	color: #ffffff;
+	font-size: 15px;
+	font-weight: 800;
+	letter-spacing: 0.08em;
+	text-transform: uppercase;
+}
+
+.doc-titulo-numero {
+	display: flex;
+	flex-direction: column;
+	justify-content: center;
+	padding: 4px 12px;
+	text-align: right;
+}
+
+.doc-numero {
+	color: $tinta;
+	font-family: ui-monospace, Menlo, Consolas, monospace;
+	font-size: 14px;
+	font-weight: 700;
+}
+
+.doc-datas {
+	display: flex;
+	flex-wrap: wrap;
+	justify-content: space-between;
+	gap: 2px 12px;
+	font-size: 11px;
+
+	strong {
+		color: $tinta;
+	}
+}
+
+// ---------- Seções ----------
+.doc-secao {
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+}
+
+.doc-secao-titulo {
+	margin: 0;
+	color: $tinta;
+	font-size: 10.5px;
+	font-weight: 700;
+	letter-spacing: 0.08em;
+	text-transform: uppercase;
+}
+
+.doc-campos {
+	// Linhas internas pela fresta de 1px entre os campos (fundo da grade = cor da linha).
+	display: grid;
+	grid-template-columns: repeat(2, minmax(0, 1fr));
+	gap: 1px;
+	border: 1px solid $linha;
+	border-radius: 4px;
+	background: $linha;
+	overflow: hidden;
+}
+
+.doc-campo {
+	display: flex;
+	flex-direction: column;
+	min-width: 0;
+	padding: 5px 8px;
+	background: #ffffff;
+}
+
+.doc-campo.col-span-2 {
+	grid-column: span 2 / span 2;
+}
+
+.doc-rotulo {
+	color: $suave;
+	font-size: 9px;
+	font-weight: 600;
+	letter-spacing: 0.06em;
+	text-transform: uppercase;
+}
+
+.doc-valor {
+	color: $tinta;
+	font-size: 12px;
+	font-weight: 600;
+	overflow-wrap: anywhere;
+}
+
+// ---------- Tabela de serviços ----------
+.doc-tabela {
+	width: 100%;
+	border-collapse: collapse;
+	border: 1px solid $tinta;
+	font-size: 11.5px;
+
+	th {
+		padding: 5px 6px;
+		background: $tinta;
+		color: #ffffff;
+		font-size: 10px;
+		font-weight: 700;
+		letter-spacing: 0.04em;
+		text-transform: uppercase;
+	}
+
+	td {
+		padding: 6px;
+		border-top: 1px solid $linha;
+		vertical-align: top;
+		overflow-wrap: anywhere;
+	}
+
+	tbody tr:nth-child(even) td {
+		background: $fundo-suave;
+	}
+}
+
+.doc-col-item {
+	width: 34px;
+	text-align: center;
+}
+
+.doc-col-valor {
+	width: 1%;
+	text-align: right;
+	white-space: nowrap;
+}
+
+// ---------- Pagamento ----------
+.doc-pagamento {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+}
+
+.doc-pagamento-linhas {
+	display: flex;
+	flex-direction: column;
+	margin: 0;
+	border: 1px solid $linha;
+	border-radius: 4px;
+
+	div {
+		display: flex;
+		justify-content: space-between;
+		gap: 12px;
+		padding: 5px 8px;
+	}
+
+	div + div {
+		border-top: 1px solid $linha;
+	}
+
+	dt {
+		color: $suave;
+	}
+
+	dd {
+		margin: 0;
+		color: $tinta;
+		font-weight: 600;
+		text-align: right;
+		white-space: nowrap;
+	}
+}
+
+.doc-total {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 12px;
+	padding: 8px 12px;
+	border-radius: 4px;
+	background: $tinta;
+	color: #ffffff;
+}
+
+.doc-total-rotulo {
+	font-size: 13px;
+	font-weight: 800;
+	letter-spacing: 0.08em;
+	text-transform: uppercase;
+}
+
+.doc-total-valor {
+	font-size: 18px;
+	font-weight: 800;
+	white-space: nowrap;
+}
+
+// ---------- Observações, autorização e rodapé ----------
+.doc-observacoes {
+	margin: 0;
+	padding: 8px;
+	border: 1px solid $linha;
+	border-radius: 4px;
+	white-space: pre-line;
+	overflow-wrap: anywhere;
+}
+
+.doc-autorizacao {
+	display: flex;
+	flex-direction: column;
+	gap: 28px;
+	padding-top: 4px;
+	color: $suave;
+	font-size: 10.5px;
+}
+
+.doc-assinaturas {
+	display: grid;
+	grid-template-columns: repeat(2, minmax(0, 1fr));
+	gap: 16px;
+}
+
+.doc-assinatura {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 3px;
+	min-width: 0;
+	text-align: center;
+	overflow-wrap: anywhere;
+}
+
+.doc-assinatura-linha {
+	width: 100%;
+	border-top: 1px solid $tinta;
+}
+
+.doc-rodape {
+	padding-top: 8px;
+	border-top: 1px solid $linha;
+	color: $suave;
+	font-size: 10px;
+	text-align: center;
+}
